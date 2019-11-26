@@ -4,3 +4,6 @@
 [submodule "external/bve-reborn"]
 	path = external/bve-reborn
 	url = git@github.com:BVE-Reborn/bve-reborn.git
+[submodule "external/cmake-cargo"]
+	path = external/cmake-cargo
+	url = https://github.com/AndrewGaspar/cmake-cargo.git

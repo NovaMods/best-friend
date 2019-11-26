@@ -11,3 +11,9 @@ set(NOVA_ENABLE_VULKAN_RHI ON CACHE BOOL "" FORCE)
 set(NOVE_ENABLE_D3D12_RHI ON CACHE BOOL "" FORCE)
 set(NOVA_ENABLE_OPENGL_RHI OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nova-renderer)
+
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-cargo/cmake)
+include(Cargo)
+
+add_crate(${CMAKE_CURRENT_LIST_DIR}/bve-reborn/bve-native/Cargo.toml)

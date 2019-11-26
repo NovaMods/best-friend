@@ -29,7 +29,7 @@ set(
 )
 
 add_executable(best-friend ${BEST_FRIEND_SOURCES})
-target_link_libraries(best-friend PRIVATE nova-renderer)
+target_link_libraries(best-friend PRIVATE nova-renderer bve-native)
 target_include_directories(best-friend PRIVATE ${CMAKE_CURRENT_LIST_DIR}/external/nova_renderer/include)
 
 if(WIN32)
