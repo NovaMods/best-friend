@@ -1,3 +1,6 @@
 [submodule "external/nova-renderer"]
 	path = external/nova-renderer
 	url = https://github.com/NovaMods/nova-renderer.git
+[submodule "external/bve-reborn"]
+	path = external/bve-reborn
+	url = git@github.com:BVE-Reborn/bve-reborn.git
