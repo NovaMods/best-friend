@@ -28,16 +28,8 @@ set(
     src/main.cpp
 )
 
-add_executable(best-friend ${BEST_FRIEND_SOURCES})
-target_link_libraries(best-friend PRIVATE nova-renderer bve-native)
-target_include_directories(best-friend PRIVATE ${CMAKE_CURRENT_LIST_DIR}/external/nova_renderer/include)
+source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${BEST_FRIEND_SOURCES})
 
-if(WIN32)
-    # Visual Studio is stupid. Is it really that hard to use filesystem directories to organize code like literally
-    # everyone else?
-    foreach(source IN LISTS BEST_FRIEND_SOURCES)
-        get_filename_component(source_path "${source}" PATH)
-        string(REPLACE "/" "\\" source_path_msvc "${source_path}")
-        source_group("${source_path_msvc}" FILES "${source}")
-    endforeach()
-endif()
+add_executable(best-friend ${BEST_FRIEND_SOURCES})
+target_link_libraries(best-friend PRIVATE nova-renderer) # bve-native)  TODO: Figure out calling cargo and whatnot
+target_include_directories(best-friend PRIVATE ${CMAKE_CURRENT_LIST_DIR}/external/nova_renderer/include)

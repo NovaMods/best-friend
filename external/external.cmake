@@ -13,7 +13,8 @@ set(NOVA_ENABLE_OPENGL_RHI OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nova-renderer)
 
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-cargo/cmake)
-include(Cargo)
+# TODO: Figure out how to invoke cargo and place things in the right place and everything
+# list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake-cargo/cmake)
+# include(Cargo)
 
-add_crate(${CMAKE_CURRENT_LIST_DIR}/bve-reborn/bve-native/Cargo.toml)
+# add_crate(${CMAKE_CURRENT_LIST_DIR}/bve-reborn/bve-native/Cargo.toml)
