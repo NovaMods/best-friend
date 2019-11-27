@@ -1,5 +1,8 @@
 #include <iostream>
 
+#define NK_IMPLEMENTATION
+#include <nuklear.h>
+
 #include <nova_renderer/nova_renderer.hpp>
 
 int main(int argc, const char** argv) {

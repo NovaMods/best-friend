@@ -18,3 +18,6 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nova-renderer)
 # include(Cargo)
 
 # add_crate(${CMAKE_CURRENT_LIST_DIR}/bve-reborn/bve-native/Cargo.toml)
+
+# N U K L E A R
+include_directories(SYSTEM ${CMAKE_CURRENT_LIST_DIR}/Nuklear)

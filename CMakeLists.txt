@@ -25,7 +25,15 @@ include(external)
 ##########################
 set(
     BEST_FRIEND_SOURCES
+
     src/main.cpp
+
+    src/ui/panel_manager.hpp
+    src/ui/panel_manager.cpp
+
+    src/ui/panel.hpp
+    src/ui/train_selection_panel.hpp
+    src/ui/train_selection_panel.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${BEST_FRIEND_SOURCES})
