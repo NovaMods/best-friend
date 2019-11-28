@@ -30,6 +30,13 @@ set(
 
     src/ui/panel_manager.hpp
     src/ui/panel_manager.cpp
+	
+    src/ec/entity.hpp
+    src/ec/entity.cpp
+    src/ec/component.hpp
+    src/ec/component.cpp
+    src/ec/transform.hpp
+    src/ec/transform.cpp
 
     src/ui/panel.hpp
     src/ui/train_selection_panel.hpp
