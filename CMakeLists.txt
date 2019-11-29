@@ -37,6 +37,9 @@ set(
     src/ec/component.cpp
     src/ec/transform.hpp
     src/ec/transform.cpp
+	
+    src/world/world.hpp
+    src/world/world.cpp
 
     src/ui/panel.hpp
     src/ui/train_selection_panel.hpp
