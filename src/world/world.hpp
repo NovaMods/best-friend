@@ -21,10 +21,26 @@ public:
      * Entities begin ticking the frame after they're added to the world. This is so entities may be added from
      * multiple threads, facilitating async loading
      *
-     * \param entity The entitiy to add tot he world
+     * \param entity The entity to add to the world
      */
     void add_entity(nova::ec::Entity* entity);
 
+    /*!
+     * \brief Removes an entity from the world
+     *
+     * This method does _not_ deallocate the entity. The caller must deallocate the entity
+     *
+     * \param entity The entity to remove from the world
+     */
+    void remove_entity(nova::ec::Entity* entity);
+
+    /*!
+     * \brief Ticks the world and all the entities in it
+     * 
+     * \param delta_time The amount of time since the world was last ticked
+     */
+    void tick(double delta_time);
+
 private:
-    std::vector<nova::ec::Entity*> Entities;
+    std::vector<nova::ec::Entity*> entities;
 };

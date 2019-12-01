@@ -33,6 +33,6 @@ namespace nova::ec {
 		/*!
 		 * \brief Perform whatever per-frame work that this component performs
 		 */
-		virtual void tick([[maybe_unused]] float delta_time) {}
+        virtual void tick([[maybe_unused]] double delta_time) {}
 	};
 }

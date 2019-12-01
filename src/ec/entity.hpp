@@ -32,7 +32,7 @@ namespace nova::ec {
 		/*!
 		 * \brief Ticks this entity and also all its components
 		 */
-		void tick(float delta_time);
+        void tick(double delta_time);
 
 		/*!
 		 * \brief Adds a new component of the specified type to this entity, forwarding all parameters to the 
