@@ -1,10 +1,12 @@
 #include <iostream>
 
+#include <nova_renderer/nova_renderer.hpp>
 #define NK_IMPLEMENTATION
 // ReSharper disable once CppUnusedIncludeDirective
-#include <nova_renderer/nova_renderer.hpp>
 #include <nuklear.h>
 
+#include "ec/entity.hpp"
+#include "ui/train_selection_panel.hpp"
 #include "world/world.hpp"
 
 int main(int argc, const char** argv) {
@@ -30,6 +32,14 @@ int main(int argc, const char** argv) {
     renderer.set_num_meshes(32); // Best guess, should fix when we know more
 
     std::unique_ptr<World> world = std::make_unique<World>();
+
+    std::shared_ptr<nk_context> nk_ctx; // TODO
+
+    // Instantiate the basic entities
+    // TODO: Make something more better
+    nova::ec::Entity* train_selection_entity = new nova::ec::Entity();
+    train_selection_entity->add_component<TrainSelectionPanel>(nk_ctx);
+    world->add_entity(train_selection_entity);
 
     nova::renderer::Window& window = renderer.get_engine()->get_window();
 
