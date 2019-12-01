@@ -42,6 +42,7 @@ set(
     src/world/world.cpp
 
     src/ui/panel.hpp
+    src/ui/panel.cpp
     src/ui/train_selection_panel.hpp
     src/ui/train_selection_panel.cpp
 )
