@@ -1,9 +1,6 @@
 #include <iostream>
 
 #include <nova_renderer/nova_renderer.hpp>
-#define NK_IMPLEMENTATION
-// ReSharper disable once CppUnusedIncludeDirective
-#include <nuklear.h>
 
 #include "ec/entity.hpp"
 #include "ui/train_selection_panel.hpp"

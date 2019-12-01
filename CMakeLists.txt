@@ -45,6 +45,9 @@ set(
     src/ui/panel.cpp
     src/ui/train_selection_panel.hpp
     src/ui/train_selection_panel.cpp
+	
+    src/renderer/nk_backend.hpp
+    src/renderer/nk_backend.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${BEST_FRIEND_SOURCES})
