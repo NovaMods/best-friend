@@ -7,8 +7,37 @@
 
 using namespace nova::renderer;
 using namespace shaderpack;
+using namespace rhi;
 
-nk_context* nk_nova_init(NovaRenderer& renderer) {
+struct UiDrawParams {
+    glm::mat4 projection;
+};
+
+struct NkVertex {
+    glm::vec2 position;
+    glm::vec2 uv;
+    glm::u8vec4 color;
+};
+
+NuklearDevice::NuklearDevice(nova::renderer::NovaRenderer& renderer) : renderer(renderer) {
+    pipeline = make_pipeline();
+
+    RenderEngine* render_engine = renderer.get_engine();
+
+    render_engine->create_buffer()
+}
+
+void NuklearDevice::render(nk_context* ctx) {
+    RenderEngine* render_engine = renderer.get_engine();
+    CommandList* cmds = render_engine->get_command_list(0, QueueType::Graphics);
+
+    cmds->begin_renderpass(nullptr, nullptr); // TODO: Figure this out
+    cmds->bind_pipeline(nullptr);             // And this
+    cmds->bind_vertex_buffers({vertex_buffer});
+    cmds->bind_index_buffer(index_buffer);
+}
+
+nova::renderer::rhi::Pipeline* NuklearDevice::make_pipeline() {
     static std::string vertex_shader;   // TODO
     static std::string fragment_shader; // TODO
 
@@ -32,4 +61,6 @@ nk_context* nk_nova_init(NovaRenderer& renderer) {
     // TODO: Scissor rectangles, somehow
 
     // TODO: Nova needs support for ad-hoc pipelines and renderpasses (and command buffers?)
+
+    return nullptr;
 }
