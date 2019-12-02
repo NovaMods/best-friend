@@ -30,10 +30,24 @@ set(
 
     src/ui/panel_manager.hpp
     src/ui/panel_manager.cpp
+	
+    src/ec/entity.hpp
+    src/ec/entity.cpp
+    src/ec/component.hpp
+    src/ec/component.cpp
+    src/ec/transform.hpp
+    src/ec/transform.cpp
+	
+    src/world/world.hpp
+    src/world/world.cpp
 
     src/ui/panel.hpp
+    src/ui/panel.cpp
     src/ui/train_selection_panel.hpp
     src/ui/train_selection_panel.cpp
+	
+    src/renderer/nk_backend.hpp
+    src/renderer/nk_backend.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${BEST_FRIEND_SOURCES})
