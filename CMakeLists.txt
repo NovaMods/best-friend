@@ -27,9 +27,6 @@ set(
     BEST_FRIEND_SOURCES
 
     src/main.cpp
-
-    src/ui/panel_manager.hpp
-    src/ui/panel_manager.cpp
 	
     src/ec/entity.hpp
     src/ec/entity.cpp
@@ -40,11 +37,16 @@ set(
 	
     src/world/world.hpp
     src/world/world.cpp
-
+	
+    src/ui/panel_manager.hpp
+    src/ui/panel_manager.cpp
     src/ui/panel.hpp
     src/ui/panel.cpp
     src/ui/train_selection_panel.hpp
     src/ui/train_selection_panel.cpp
+
+	src/loading/train_loading.hpp
+	src/loading/train_loading.cpp
 	
     src/renderer/nk_backend.hpp
     src/renderer/nk_backend.cpp
