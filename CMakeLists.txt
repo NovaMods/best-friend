@@ -27,6 +27,8 @@ set(
     BEST_FRIEND_SOURCES
 
     src/main.cpp
+
+    src/util/constants.hpp
 	
     src/ec/entity.hpp
     src/ec/entity.cpp

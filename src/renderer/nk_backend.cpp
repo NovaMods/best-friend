@@ -5,6 +5,8 @@
 #define NK_IMPLEMENTATION
 #include <nuklear.h>
 
+#include "../util/constants.hpp"
+
 using namespace nova::renderer;
 using namespace shaderpack;
 using namespace rhi;
@@ -19,48 +21,32 @@ struct NkVertex {
     glm::u8vec4 color;
 };
 
-NuklearDevice::NuklearDevice(nova::renderer::NovaRenderer& renderer) : renderer(renderer) {
-    pipeline = make_pipeline();
+NuklearDevice::NuklearDevice(NovaRenderer& renderer)
+    : renderer(renderer), mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
-    RenderEngine* render_engine = renderer.get_engine();
+    // TODO: Some way to validate that this pass exists in the loaded shaderpack
+    const FullMaterialPassName& ui_full_material_pass_name = {"UI", "Color"};
+    StaticMeshRenderableData ui_renderable_data = {};
+    ui_renderable_data.mesh = mesh.get_key();
+    ui_renderable_id = renderer.add_renderable_for_material(ui_full_material_pass_name, ui_renderable_data);
 
-    render_engine->create_buffer()
+    const auto& window = renderer.get_engine()->get_window();
+    window.register_key_callback([&](const auto& key) {
+        std::lock_guard l(key_buffer_mutex);
+        keys.push_back(key);
+    });
 }
 
-void NuklearDevice::render(nk_context* ctx) {
-    RenderEngine* render_engine = renderer.get_engine();
-    CommandList* cmds = render_engine->get_command_list(0, QueueType::Graphics);
+void NuklearDevice::begin_frame() {
+    nk_input_begin(ctx);
 
-    cmds->begin_renderpass(nullptr, nullptr); // TODO: Figure this out
-    cmds->bind_pipeline(nullptr);             // And this
-    cmds->bind_vertex_buffers({vertex_buffer});
-    cmds->bind_index_buffer(index_buffer);
+    for(const auto key : keys) {
+        nk_input_unicode(ctx, key);
+    }
+
+    nk_input_end(ctx);
 }
 
-nova::renderer::rhi::Pipeline* NuklearDevice::make_pipeline() {
-    static std::string vertex_shader;   // TODO
-    static std::string fragment_shader; // TODO
+void NuklearDevice::render() {
 
-    PipelineCreateInfo nk_pipeline_create_info = {};
-    nk_pipeline_create_info.name = "NuklearUIPipeline";
-    nk_pipeline_create_info.pass = "UI";
-
-    nk_pipeline_create_info.states.push_back(StateEnum::DisableDepthTest);
-    nk_pipeline_create_info.states.push_back(StateEnum::DisableCulling);
-
-    nk_pipeline_create_info.states.push_back(StateEnum::Blending);
-    nk_pipeline_create_info.source_blend_factor = BlendFactorEnum::SrcAlpha;
-    nk_pipeline_create_info.destination_blend_factor = BlendFactorEnum::OneMinusSrcAlpha;
-
-    nk_pipeline_create_info.vertex_fields.emplace_back("Position", VertexFieldEnum::Position);
-    nk_pipeline_create_info.vertex_fields.emplace_back("UV0", VertexFieldEnum::UV0);
-    nk_pipeline_create_info.vertex_fields.emplace_back("Color", VertexFieldEnum::Color);
-
-    nk_pipeline_create_info.primitive_mode = PrimitiveTopologyEnum::Triangles;
-
-    // TODO: Scissor rectangles, somehow
-
-    // TODO: Nova needs support for ad-hoc pipelines and renderpasses (and command buffers?)
-
-    return nullptr;
 }

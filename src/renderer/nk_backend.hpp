@@ -1,4 +1,8 @@
 #pragma once
+#include "nova_renderer/util/container_accessor.hpp"
+#include "nova_renderer/renderables.hpp"
+#include <mutex>
+// #include "nova_renderer/frontend/procedural_mesh.hpp"
 
 //! \brief Nuklear backend that renders Nuklear geometry with the Nova renderer
 //!
@@ -9,9 +13,11 @@ struct nk_context;
 namespace nova::renderer {
     class NovaRenderer;
 
+    class ProceduralMesh;
+
     namespace rhi {
-        class Buffer;
-        class Pipeline;
+        struct Buffer;
+        struct Pipeline;
     }
 } // namespace nova::renderer
 
@@ -25,20 +31,26 @@ public:
     nk_context* make_context();
 
     /*!
-     * \brief Renders all the UI elements that were drawn to the context
-     * 
-     * \param ctx The Nuklear context to render
+     * \brief Begins a frame by doing things like input handling
      */
-    void render(nk_context* ctx);
+    void begin_frame();
+
+    /*!
+     * \brief Renders all the UI elements that were drawn to the context
+     */
+    void render();
 
 private:
+    nk_context* ctx;
+
     nova::renderer::NovaRenderer& renderer;
 
-    nova::renderer::rhi::Buffer* vertex_buffer;
-    nova::renderer::rhi::Buffer* index_buffer;
     nova::renderer::rhi::Buffer* ui_draw_params;
 
-    nova::renderer::rhi::Pipeline* pipeline;
+    nova::renderer::RenderableId ui_renderable_id;
 
-    nova::renderer::rhi::Pipeline* make_pipeline();
+    nova::renderer::MapAccessor<nova::renderer::MeshId, nova::renderer::ProceduralMesh> mesh;
+
+    std::mutex key_buffer_mutex;
+    std::vector<uint32_t> keys;
 };
