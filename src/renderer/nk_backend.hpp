@@ -52,5 +52,9 @@ private:
     nova::renderer::MapAccessor<nova::renderer::MeshId, nova::renderer::ProceduralMesh> mesh;
 
     std::mutex key_buffer_mutex;
-    std::vector<uint32_t> keys;
+
+    /*!
+     * \brief Vector of all the keys we received this frame and if they were pressed down or not
+     */
+    std::vector<std::pair<uint32_t, bool>> keys;
 };
