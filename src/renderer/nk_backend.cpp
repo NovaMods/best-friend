@@ -30,8 +30,8 @@ NuklearDevice::NuklearDevice(NovaRenderer& renderer)
     ui_renderable_data.mesh = mesh.get_key();
     ui_renderable_id = renderer.add_renderable_for_material(ui_full_material_pass_name, ui_renderable_data);
 
-    const auto& window = renderer.get_engine()->get_window();
-    window.register_key_callback([&](const auto& key) {
+    const auto window = renderer.get_window();
+    window->register_key_callback([&](const auto& key) {
         std::lock_guard l(key_buffer_mutex);
         keys.push_back(key);
     });
