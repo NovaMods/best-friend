@@ -3,9 +3,16 @@
 #include <nova_renderer/frontend/procedural_mesh.hpp>
 #include <nova_renderer/nova_renderer.hpp>
 
-#define NK_IMPLEMENTATION
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
 #define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_IMPLEMENTATION
+#define NK_GLFW_GL4_IMPLEMENTATION
+#define NK_KEYSTATE_BASED_INPUT
 #include <nuklear.h>
 
 #include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
@@ -216,6 +223,18 @@ namespace nova::bf {
 		config.line_AA = NK_ANTI_ALIASING_ON;
 
 		nk_convert(ctx.get(), &cmds, &vertex_buffer, &index_buffer, &config);
+
+        for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &cmds); cmd != nullptr; cmd = nk__draw_next(cmd, &cmds, ctx.get())) {
+            if(cmd->elem_count == 0) {
+                continue;
+            }
+
+			const int tex_index = cmd->texture.id;
+            const Texture* texture = textures.find(tex_index);
+
+            renderer.
+
+        }
     }
 
     nk_buttons to_nk_mouse_button(const uint32_t button) {

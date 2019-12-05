@@ -1,6 +1,7 @@
 #pragma once
 #include <mutex>
 #include <optional>
+#include <unordered_map>
 
 #include <nova_renderer/renderables.hpp>
 #include <nova_renderer/util/container_accessor.hpp>
@@ -18,6 +19,7 @@ namespace nova {
 
         namespace rhi {
             struct Buffer;
+            struct Texture;
             struct Pipeline;
         } // namespace rhi
     }     // namespace renderer
@@ -60,15 +62,15 @@ namespace nova {
 
             renderer::RenderableId ui_renderable_id;
 
-			nk_buffer cmds;
+            nk_buffer cmds;
 
             renderer::MapAccessor<renderer::MeshId, renderer::ProceduralMesh> mesh;
             std::vector<NuklearVertex> vertices;
-			nk_buffer vertex_buffer;
+            nk_buffer vertex_buffer;
             std::vector<uint32_t> indices;
-			nk_buffer index_buffer;
+            nk_buffer index_buffer;
 
-			nk_draw_null_texture null;
+            nk_draw_null_texture null;
 
             std::mutex key_buffer_mutex;
 
@@ -80,6 +82,7 @@ namespace nova {
             glm::dvec2 most_recent_mouse_position;
 
             std::optional<std::pair<nk_buttons, bool>> most_recent_mouse_button;
+            std::unordered_map<int, renderer::rhi::Texture*> textures;
         };
     } // namespace bf
 } // namespace nova
