@@ -168,8 +168,9 @@ namespace nova::bf {
     }
 
     NuklearDevice::~NuklearDevice() {
-		nk_buffer_free(&cmds);
-        nk_clear(ctx.get()); }
+        nk_buffer_free(&cmds);
+        nk_clear(ctx.get());
+    }
 
     std::shared_ptr<nk_context> NuklearDevice::get_context() const { return ctx; }
 
@@ -203,40 +204,46 @@ namespace nova::bf {
     }
 
     void NuklearDevice::render() {
-		static const nk_draw_vertex_layout_element vertex_layout[] = {
-			{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
-			{NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
-			{NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
-			{NK_VERTEX_LAYOUT_END}
-		};
+        static const nk_draw_vertex_layout_element vertex_layout[] =
+            {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
+             {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
+             {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
+             {NK_VERTEX_LAYOUT_END}};
 
-		nk_convert_config config = {};
-		config.vertex_layout = vertex_layout;
-		config.vertex_size = sizeof(NuklearVertex);
-		config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
-		config.null = null;
-		config.circle_segment_count = 22;
-		config.curve_segment_count = 22;
-		config.arc_segment_count = 22;
-		config.global_alpha = 1.0f;
-		config.shape_AA = NK_ANTI_ALIASING_ON;
-		config.line_AA = NK_ANTI_ALIASING_ON;
+        nk_convert_config config = {};
+        config.vertex_layout = vertex_layout;
+        config.vertex_size = sizeof(NuklearVertex);
+        config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
+        config.null = null;
+        config.circle_segment_count = 22;
+        config.curve_segment_count = 22;
+        config.arc_segment_count = 22;
+        config.global_alpha = 1.0f;
+        config.shape_AA = NK_ANTI_ALIASING_ON;
+        config.line_AA = NK_ANTI_ALIASING_ON;
 
-		nk_convert(ctx.get(), &cmds, &vertex_buffer, &index_buffer, &config);
+        nk_convert(ctx.get(), &cmds, &vertex_buffer, &index_buffer, &config);
 
-	    CommandList* cmds;
+        CommandList* cmds;
+
+        // For each command, add its texture to a texture array and add its mesh data to a mesh
+        // When the texture array is full, allocate a new one from the RHI and begin using that for draws
+        // When the mesh is full, allocate a new one from the RHI
+        // We need to keep a lit of previously-used descriptor
+        // The descriptors need to be CPU descriptors that we can update whenvever we feel like. The RHI should create GPU descriptors on
+        // draw HOWEVER, we should keep a buffer of meshes that we already used so we don't constantly reallcoate meshes
 
         for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &cmds); cmd != nullptr; cmd = nk__draw_next(cmd, &cmds, ctx.get())) {
             if(cmd->elem_count == 0) {
                 continue;
             }
 
-			const int tex_index = cmd->texture.id;
+            const int tex_index = cmd->texture.id;
             const auto tex_itr = textures.find(tex_index);
 
-            // TODO: Get the UI material reference and set its texture
-            // Or do our own command list thing... lmao
-            
+            // TODO: Create a texture array with up to 256 UI textures, then bind that and issue a drawcall. Repeat as much as necessary
+            // TODO: Figure out if 256 is a reasonable number and correct it if necessary
+
             Buffer* verts = nullptr;
             Buffer* indices = nullptr;
 
