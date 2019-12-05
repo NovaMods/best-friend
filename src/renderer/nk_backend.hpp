@@ -5,6 +5,8 @@
 
 #include "nova_renderer/renderables.hpp"
 #include "nova_renderer/util/container_accessor.hpp"
+#include <optional>
+
 // #include "nova_renderer/frontend/procedural_mesh.hpp"
 
 //! \brief Nuklear backend that renders Nuklear geometry with the Nova renderer
@@ -29,12 +31,14 @@ class NuklearDevice final {
 public:
     explicit NuklearDevice(nova::renderer::NovaRenderer& renderer);
 
+    ~NuklearDevice();
+
 	std::shared_ptr<nk_context> get_context() const;
 
     /*!
      * \brief Begins a frame by doing things like input handling
      */
-    void begin_frame();
+    void consume_input();
 
     /*!
      * \brief Renders all the UI elements that were drawn to the context
@@ -61,5 +65,5 @@ private:
 
     glm::dvec2 most_recent_mouse_position;
 
-    std::pair<nk_buttons, bool> most_recent_mouse_button;
+    std::optional<std::pair<nk_buttons, bool>> most_recent_mouse_button;
 };

@@ -149,19 +149,27 @@ NuklearDevice::NuklearDevice(NovaRenderer& renderer)
     });
 }
 
+NuklearDevice::~NuklearDevice() { nk_clear(ctx.get()); }
+
 std::shared_ptr<nk_context> NuklearDevice::get_context() const { return ctx; }
 
-void NuklearDevice::begin_frame() {
+void NuklearDevice::consume_input() {
     nk_input_begin(ctx.get());
 
+    // TODO: Handle people typing text
+    // TODO: Scrolling of some sort
+
+    // Consume keyboard input
     for(const auto& [key, is_pressed] : keys) {
         nk_input_key(ctx.get(), key, is_pressed);
     }
 
     keys.clear();
 
+    // Update NK with the current mouse position
     nk_input_motion(ctx.get(), most_recent_mouse_position.x, most_recent_mouse_position.y);
 
+    // Consume the most recent mouse button
     if(most_recent_mouse_button) {
         nk_input_button(ctx.get(),
                         most_recent_mouse_button->first,
