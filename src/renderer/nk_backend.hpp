@@ -19,6 +19,7 @@ namespace nova {
 
         namespace rhi {
             struct Buffer;
+            struct DescriptorSet;
             struct Texture;
             struct Pipeline;
         } // namespace rhi
@@ -82,7 +83,7 @@ namespace nova {
             glm::dvec2 most_recent_mouse_position;
 
             std::optional<std::pair<nk_buttons, bool>> most_recent_mouse_button;
-            std::unordered_map<int, renderer::rhi::Texture*> textures;
+            std::unordered_map<int, renderer::rhi::DescriptorSet*> textures;
         };
     } // namespace bf
 } // namespace nova

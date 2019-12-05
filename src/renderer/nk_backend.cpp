@@ -224,16 +224,26 @@ namespace nova::bf {
 
 		nk_convert(ctx.get(), &cmds, &vertex_buffer, &index_buffer, &config);
 
+	    CommandList* cmds;
+
         for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &cmds); cmd != nullptr; cmd = nk__draw_next(cmd, &cmds, ctx.get())) {
             if(cmd->elem_count == 0) {
                 continue;
             }
 
 			const int tex_index = cmd->texture.id;
-            const Texture* texture = textures.find(tex_index);
+            const auto tex_itr = textures.find(tex_index);
 
-            renderer.
+            // TODO: Get the UI material reference and set its texture
+            // Or do our own command list thing... lmao
+            
+            Buffer* verts = nullptr;
+            Buffer* indices = nullptr;
 
+            cmds->bind_descriptor_sets({tex_itr->second}, nullptr);
+            cmds->bind_vertex_buffers({verts});
+            cmds->bind_index_buffer(indices);
+            cmds->draw_indexed_mesh(cmd->elem_count, 1);
         }
     }
 
