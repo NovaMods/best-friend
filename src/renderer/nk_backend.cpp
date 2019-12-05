@@ -4,6 +4,8 @@
 #include <nova_renderer/nova_renderer.hpp>
 
 #define NK_IMPLEMENTATION
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
 #include <nuklear.h>
 
 #include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
@@ -20,6 +22,13 @@ namespace nova::bf {
 
     nk_buttons to_nk_mouse_button(uint32_t button);
 
+    void NuklearDevice::init_nuklear() {
+        nk_buffer_init_default(&cmds);
+
+        nk_buffer_init_fixed(&vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
+        nk_buffer_init_fixed(&index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
+    }
+
     NuklearDevice::NuklearDevice(NovaRenderer& renderer)
         : renderer(renderer), mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
@@ -31,6 +40,8 @@ namespace nova::bf {
 
         vertices.reserve(MAX_VERTEX_BUFFER_SIZE / sizeof(NuklearVertex));
         indices.reserve(MAX_INDEX_BUFFER_SIZE / sizeof(uint32_t));
+
+        init_nuklear();
 
         const auto window = renderer.get_window();
         window->register_key_callback(
@@ -149,7 +160,9 @@ namespace nova::bf {
         });
     }
 
-    NuklearDevice::~NuklearDevice() { nk_clear(ctx.get()); }
+    NuklearDevice::~NuklearDevice() {
+		nk_buffer_free(&cmds);
+        nk_clear(ctx.get()); }
 
     std::shared_ptr<nk_context> NuklearDevice::get_context() const { return ctx; }
 
@@ -183,6 +196,26 @@ namespace nova::bf {
     }
 
     void NuklearDevice::render() {
+		static const nk_draw_vertex_layout_element vertex_layout[] = {
+			{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
+			{NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
+			{NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
+			{NK_VERTEX_LAYOUT_END}
+		};
+
+		nk_convert_config config = {};
+		config.vertex_layout = vertex_layout;
+		config.vertex_size = sizeof(NuklearVertex);
+		config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
+		config.null = null;
+		config.circle_segment_count = 22;
+		config.curve_segment_count = 22;
+		config.arc_segment_count = 22;
+		config.global_alpha = 1.0f;
+		config.shape_AA = NK_ANTI_ALIASING_ON;
+		config.line_AA = NK_ANTI_ALIASING_ON;
+
+		nk_convert(ctx.get(), &cmds, &vertex_buffer, &index_buffer, &config);
     }
 
     nk_buttons to_nk_mouse_button(const uint32_t button) {

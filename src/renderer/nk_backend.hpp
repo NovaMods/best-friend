@@ -34,7 +34,8 @@ namespace nova {
          */
         class NuklearDevice final {
         public:
-            explicit NuklearDevice(nova::renderer::NovaRenderer& renderer);
+            void init_nuklear();
+            explicit NuklearDevice(renderer::NovaRenderer& renderer);
 
             ~NuklearDevice();
 
@@ -53,15 +54,21 @@ namespace nova {
         private:
             std::shared_ptr<nk_context> ctx;
 
-            nova::renderer::NovaRenderer& renderer;
+            renderer::NovaRenderer& renderer;
 
-            nova::renderer::rhi::Buffer* ui_draw_params;
+            renderer::rhi::Buffer* ui_draw_params;
 
-            nova::renderer::RenderableId ui_renderable_id;
+            renderer::RenderableId ui_renderable_id;
 
-            nova::renderer::MapAccessor<nova::renderer::MeshId, nova::renderer::ProceduralMesh> mesh;
+			nk_buffer cmds;
+
+            renderer::MapAccessor<renderer::MeshId, renderer::ProceduralMesh> mesh;
             std::vector<NuklearVertex> vertices;
+			nk_buffer vertex_buffer;
             std::vector<uint32_t> indices;
+			nk_buffer index_buffer;
+
+			nk_draw_null_texture null;
 
             std::mutex key_buffer_mutex;
 
