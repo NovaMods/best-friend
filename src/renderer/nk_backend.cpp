@@ -22,7 +22,7 @@ struct NkVertex {
     glm::u8vec4 color;
 };
 
-nk_keys glfw_key_to_nk_key(uint32_t glfw_key, bool is_control_down, bool is_shift_down);
+nk_buttons to_nk_mouse_button(uint32_t button);
 
 NuklearDevice::NuklearDevice(NovaRenderer& renderer)
     : renderer(renderer), mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
@@ -139,16 +139,52 @@ NuklearDevice::NuklearDevice(NovaRenderer& renderer)
             }
         }
     });
+
+    window->register_mouse_callback([&](const double x_position, const double y_position) {
+        most_recent_mouse_position = {x_position, y_position};
+    });
+
+    window->register_mouse_button_callback([&](const uint32_t button, const bool is_press) {
+        most_recent_mouse_button = std::make_optional<std::pair<nk_buttons, bool>>(to_nk_mouse_button(button), is_press);
+    });
 }
 
+std::shared_ptr<nk_context> NuklearDevice::get_context() const { return ctx; }
+
 void NuklearDevice::begin_frame() {
-    nk_input_begin(ctx);
+    nk_input_begin(ctx.get());
 
     for(const auto& [key, is_pressed] : keys) {
-        nk_input_key(ctx, key, is_pressed);
+        nk_input_key(ctx.get(), key, is_pressed);
     }
 
-    nk_input_end(ctx);
+    keys.clear();
+
+    nk_input_motion(ctx.get(), most_recent_mouse_position.x, most_recent_mouse_position.y);
+
+    if(most_recent_mouse_button) {
+        nk_input_button(ctx.get(),
+                        most_recent_mouse_button->first,
+                        most_recent_mouse_position.x,
+                        most_recent_mouse_position.y,
+                        most_recent_mouse_button->second);
+        most_recent_mouse_button = {};
+    }
+
+    nk_input_end(ctx.get());
 }
 
 void NuklearDevice::render() {}
+
+nk_buttons to_nk_mouse_button(const uint32_t button) {
+    switch(button) {
+        case GLFW_MOUSE_BUTTON_LEFT:
+            return NK_BUTTON_LEFT;
+
+        case GLFW_MOUSE_BUTTON_MIDDLE:
+            return NK_BUTTON_MIDDLE;
+
+        case GLFW_MOUSE_BUTTON_RIGHT:
+            return NK_BUTTON_RIGHT;
+    }
+}

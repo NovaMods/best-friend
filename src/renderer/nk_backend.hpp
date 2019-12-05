@@ -1,14 +1,15 @@
 #pragma once
-#include "nova_renderer/util/container_accessor.hpp"
-#include "nova_renderer/renderables.hpp"
 #include <mutex>
+
+#include <nuklear.h>
+
+#include "nova_renderer/renderables.hpp"
+#include "nova_renderer/util/container_accessor.hpp"
 // #include "nova_renderer/frontend/procedural_mesh.hpp"
 
 //! \brief Nuklear backend that renders Nuklear geometry with the Nova renderer
 //!
 //! Based on the Nuklear GL4 examples
-
-struct nk_context;
 
 namespace nova::renderer {
     class NovaRenderer;
@@ -18,7 +19,7 @@ namespace nova::renderer {
     namespace rhi {
         struct Buffer;
         struct Pipeline;
-    }
+    } // namespace rhi
 } // namespace nova::renderer
 
 /*!
@@ -28,7 +29,7 @@ class NuklearDevice final {
 public:
     explicit NuklearDevice(nova::renderer::NovaRenderer& renderer);
 
-    nk_context* make_context();
+	std::shared_ptr<nk_context> get_context() const;
 
     /*!
      * \brief Begins a frame by doing things like input handling
@@ -41,7 +42,7 @@ public:
     void render();
 
 private:
-    nk_context* ctx;
+    std::shared_ptr<nk_context> ctx;
 
     nova::renderer::NovaRenderer& renderer;
 
@@ -56,5 +57,9 @@ private:
     /*!
      * \brief Vector of all the keys we received this frame and if they were pressed down or not
      */
-    std::vector<std::pair<uint32_t, bool>> keys;
+    std::vector<std::pair<nk_keys, bool>> keys;
+
+    glm::dvec2 most_recent_mouse_position;
+
+    std::pair<nk_buttons, bool> most_recent_mouse_button;
 };
