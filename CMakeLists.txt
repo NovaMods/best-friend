@@ -26,6 +26,8 @@ include(external)
 set(
     BEST_FRIEND_SOURCES
 
+	external/Nuklear/nuklear.h
+
     src/main.cpp
 
     src/util/constants.hpp

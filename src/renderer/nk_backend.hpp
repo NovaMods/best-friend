@@ -18,9 +18,11 @@ namespace nova {
         class ProceduralMesh;
 
         namespace rhi {
+            class CommandList;
+
             struct Buffer;
             struct DescriptorSet;
-            struct Texture;
+            struct Image;
             struct Pipeline;
         } // namespace rhi
     }     // namespace renderer
@@ -37,7 +39,7 @@ namespace nova {
          */
         class NuklearDevice final {
         public:
-            void init_nuklear();
+            void register_input_callbacks();
             explicit NuklearDevice(renderer::NovaRenderer& renderer);
 
             ~NuklearDevice();
@@ -49,11 +51,6 @@ namespace nova {
              */
             void consume_input();
 
-            /*!
-             * \brief Renders all the UI elements that were drawn to the context
-             */
-            void render();
-
         private:
             std::shared_ptr<nk_context> ctx;
 
@@ -63,7 +60,7 @@ namespace nova {
 
             renderer::RenderableId ui_renderable_id;
 
-            nk_buffer cmds;
+            nk_buffer nk_cmds;
 
             renderer::MapAccessor<renderer::MeshId, renderer::ProceduralMesh> mesh;
             std::vector<NuklearVertex> vertices;
@@ -83,7 +80,20 @@ namespace nova {
             glm::dvec2 most_recent_mouse_position;
 
             std::optional<std::pair<nk_buttons, bool>> most_recent_mouse_button;
-            std::unordered_map<int, renderer::rhi::DescriptorSet*> textures;
+
+            /*!
+             * \brief List of all the descriptor sets that can hold an array of textures
+             */
+            std::vector<renderer::rhi::DescriptorSet*> sets;
+            std::unordered_map<int, renderer::rhi::Image*> textures;
+
+			void init_nuklear();
+            void create_textures();
+
+			/*!
+			 * \brief Renders all the UI elements that were drawn to the context
+			 */
+			void render(renderer::rhi::CommandList* cmds);
         };
     } // namespace bf
 } // namespace nova

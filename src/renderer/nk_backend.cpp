@@ -3,38 +3,34 @@
 #include <nova_renderer/frontend/procedural_mesh.hpp>
 #include <nova_renderer/nova_renderer.hpp>
 
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL4_IMPLEMENTATION
-#define NK_KEYSTATE_BASED_INPUT
 #include <nuklear.h>
 
 #include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
+#include "../../external/nova-renderer/src/util/logger.hpp"
 #include "../util/constants.hpp"
-
 using namespace nova::renderer;
 using namespace shaderpack;
 using namespace rhi;
 
 namespace nova::bf {
+    constexpr PixelFormatEnum UI_IMAGE_FORMAT = PixelFormatEnum::RGBA8;
+
     struct UiDrawParams {
         glm::mat4 projection;
     };
 
+    struct UiBatch {
+        DescriptorSet* descriptors;
+        MapAccessor<MeshId, ProceduralMesh> mesh;
+    };
+
+    struct NuklearTextureIdVertex : NuklearVertex {
+        uint32_t texture_id;
+    };
+
     nk_buttons to_nk_mouse_button(uint32_t button);
-
-    void NuklearDevice::init_nuklear() {
-        nk_buffer_init_default(&cmds);
-
-        nk_buffer_init_fixed(&vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
-        nk_buffer_init_fixed(&index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
-    }
 
     NuklearDevice::NuklearDevice(NovaRenderer& renderer)
         : renderer(renderer), mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
@@ -50,6 +46,146 @@ namespace nova::bf {
 
         init_nuklear();
 
+        register_input_callbacks();
+
+        create_textures();
+
+        renderer.register_ui_draw_function([&](CommandList* cmds) { render(cmds); });
+    }
+
+    NuklearDevice::~NuklearDevice() {
+        nk_buffer_free(&nk_cmds);
+        nk_clear(ctx.get());
+    }
+
+    std::shared_ptr<nk_context> NuklearDevice::get_context() const { return ctx; }
+
+    void NuklearDevice::consume_input() {
+        nk_input_begin(ctx.get());
+
+        // TODO: Handle people typing text
+        // TODO: Scrolling of some sort
+
+        // Consume keyboard input
+        for(const auto& [key, is_pressed] : keys) {
+            nk_input_key(ctx.get(), key, is_pressed);
+        }
+
+        keys.clear();
+
+        // Update NK with the current mouse position
+        nk_input_motion(ctx.get(), most_recent_mouse_position.x, most_recent_mouse_position.y);
+
+        // Consume the most recent mouse button
+        if(most_recent_mouse_button) {
+            nk_input_button(ctx.get(),
+                            most_recent_mouse_button->first,
+                            most_recent_mouse_position.x,
+                            most_recent_mouse_position.y,
+                            most_recent_mouse_button->second);
+            most_recent_mouse_button = {};
+        }
+
+        nk_input_end(ctx.get());
+    }
+
+    void NuklearDevice::render(CommandList* cmds) {
+        static const nk_draw_vertex_layout_element vertex_layout[] =
+            {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
+             {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
+             {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
+             {NK_VERTEX_LAYOUT_END}};
+
+        nk_convert_config config = {};
+        config.vertex_layout = vertex_layout;
+        config.vertex_size = sizeof(NuklearVertex);
+        config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
+        config.null = null;
+        config.circle_segment_count = 22;
+        config.curve_segment_count = 22;
+        config.arc_segment_count = 22;
+        config.global_alpha = 1.0f;
+        config.shape_AA = NK_ANTI_ALIASING_ON;
+        config.line_AA = NK_ANTI_ALIASING_ON;
+
+        // vertex_buffer and index_buffer let Nuklear write vertex information directly
+        nk_convert(ctx.get(), &nk_cmds, &vertex_buffer, &index_buffer, &config);
+
+        // For each command, add its texture to a texture array and add its mesh data to a mesh
+        // When the texture array is full, allocate a new one from the RHI and begin using that for draws
+        // When the mesh is full, allocate a new one from the RHI
+        // We need to keep a lit of previously-used descriptor
+        // The descriptors need to be CPU descriptors that we can update whenever we feel like. The RHI should create GPU descriptors on
+        // draw HOWEVER, we should keep a buffer of meshes that we already used so we don't constantly reallocate meshes
+
+        // Textures to bind to the current descriptor set
+        std::vector<Image*> current_descriptor_textures;
+        current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
+
+        // Iterator to the descriptor set to write the current textures to
+        auto descriptor_set_itr = sets.begin();
+
+        uint32_t num_sets_used = 0;
+
+        for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
+            cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
+            if(cmd->elem_count == 0) {
+                continue;
+            }
+
+            const int tex_index = cmd->texture.id;
+            const auto tex_itr = textures.find(tex_index);
+            if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
+                current_descriptor_textures.emplace_back(*tex_itr);
+
+            } else {
+                std::vector<DescriptorSetWrite> writes(1);
+                DescriptorSetWrite& write = writes[0];
+                write.set = *descriptor_set_itr;
+                write.first_binding = 0;
+                write.type = DescriptorType::CombinedImageSampler;
+                write.bindings.reserve(current_descriptor_textures.size());
+
+                std::transform(current_descriptor_textures.begin(),
+                               current_descriptor_textures.end(),
+                               std::back_insert_iterator<std::vector<DescriptorResourceInfo>>(write.bindings),
+                               [&](Image* image) {
+                                   DescriptorResourceInfo info = {};
+                                   info.image_info.image = image;
+                                   info.image_info.format.pixel_format = UI_IMAGE_FORMAT;
+                                   info.image_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
+                                   info.image_info.format.width = FONT_ATLAS_TEXTURE_WIDTH;
+                                   info.image_info.format.height = FONT_ATLAS_TEXTURE_HEIGHT;
+                                   return info;
+                               });
+
+                renderer.get_engine()->update_descriptor_sets(writes);
+
+                num_sets_used++;
+                ++descriptor_set_itr;
+            }
+        }
+
+        NOVA_LOG(INFO) << "Used " << num_sets_used << " descriptor sets. Maybe you should only use one";
+
+        const auto [verts, indices] = mesh->get_buffers_for_frame(renderer.get_current_frame_index());
+
+        cmds->bind_descriptor_sets(sets, nullptr); // TODO: Command list should store the pipeline interface internally 
+        cmds->bind_vertex_buffers({verts, verts, verts});
+        cmds->bind_index_buffer(indices);
+        cmds->draw_indexed_mesh(35, 1); // TODO: Figure out how many indices
+    }
+
+    void NuklearDevice::init_nuklear() {
+        nk_buffer_init_default(&nk_cmds);
+
+        nk_buffer_init_fixed(&vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
+        nk_buffer_init_fixed(&index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
+    }
+
+    void NuklearDevice::create_texture() { shaderpack::TextureCreateInfo; }
+
+    void NuklearDevice::register_input_callbacks() {
         const auto window = renderer.get_window();
         window->register_key_callback(
             [&](const auto& key, const bool is_press, const bool is_control_down, const bool /* is_shift_down */) {
@@ -167,93 +303,6 @@ namespace nova::bf {
         });
     }
 
-    NuklearDevice::~NuklearDevice() {
-        nk_buffer_free(&cmds);
-        nk_clear(ctx.get());
-    }
-
-    std::shared_ptr<nk_context> NuklearDevice::get_context() const { return ctx; }
-
-    void NuklearDevice::consume_input() {
-        nk_input_begin(ctx.get());
-
-        // TODO: Handle people typing text
-        // TODO: Scrolling of some sort
-
-        // Consume keyboard input
-        for(const auto& [key, is_pressed] : keys) {
-            nk_input_key(ctx.get(), key, is_pressed);
-        }
-
-        keys.clear();
-
-        // Update NK with the current mouse position
-        nk_input_motion(ctx.get(), most_recent_mouse_position.x, most_recent_mouse_position.y);
-
-        // Consume the most recent mouse button
-        if(most_recent_mouse_button) {
-            nk_input_button(ctx.get(),
-                            most_recent_mouse_button->first,
-                            most_recent_mouse_position.x,
-                            most_recent_mouse_position.y,
-                            most_recent_mouse_button->second);
-            most_recent_mouse_button = {};
-        }
-
-        nk_input_end(ctx.get());
-    }
-
-    void NuklearDevice::render() {
-        static const nk_draw_vertex_layout_element vertex_layout[] =
-            {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
-             {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
-             {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
-             {NK_VERTEX_LAYOUT_END}};
-
-        nk_convert_config config = {};
-        config.vertex_layout = vertex_layout;
-        config.vertex_size = sizeof(NuklearVertex);
-        config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
-        config.null = null;
-        config.circle_segment_count = 22;
-        config.curve_segment_count = 22;
-        config.arc_segment_count = 22;
-        config.global_alpha = 1.0f;
-        config.shape_AA = NK_ANTI_ALIASING_ON;
-        config.line_AA = NK_ANTI_ALIASING_ON;
-
-        nk_convert(ctx.get(), &cmds, &vertex_buffer, &index_buffer, &config);
-
-        CommandList* cmds;
-
-        // For each command, add its texture to a texture array and add its mesh data to a mesh
-        // When the texture array is full, allocate a new one from the RHI and begin using that for draws
-        // When the mesh is full, allocate a new one from the RHI
-        // We need to keep a lit of previously-used descriptor
-        // The descriptors need to be CPU descriptors that we can update whenvever we feel like. The RHI should create GPU descriptors on
-        // draw HOWEVER, we should keep a buffer of meshes that we already used so we don't constantly reallcoate meshes
-
-        for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &cmds); cmd != nullptr; cmd = nk__draw_next(cmd, &cmds, ctx.get())) {
-            if(cmd->elem_count == 0) {
-                continue;
-            }
-
-            const int tex_index = cmd->texture.id;
-            const auto tex_itr = textures.find(tex_index);
-
-            // TODO: Create a texture array with up to 256 UI textures, then bind that and issue a drawcall. Repeat as much as necessary
-            // TODO: Figure out if 256 is a reasonable number and correct it if necessary
-
-            Buffer* verts = nullptr;
-            Buffer* indices = nullptr;
-
-            cmds->bind_descriptor_sets({tex_itr->second}, nullptr);
-            cmds->bind_vertex_buffers({verts});
-            cmds->bind_index_buffer(indices);
-            cmds->draw_indexed_mesh(cmd->elem_count, 1);
-        }
-    }
-
     nk_buttons to_nk_mouse_button(const uint32_t button) {
         switch(button) {
             case GLFW_MOUSE_BUTTON_LEFT:
@@ -266,4 +315,5 @@ namespace nova::bf {
                 return NK_BUTTON_RIGHT;
         }
     }
+
 } // namespace nova::bf
