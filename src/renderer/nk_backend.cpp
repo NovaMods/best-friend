@@ -10,13 +10,12 @@
 #include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
 #include "../../external/nova-renderer/src/util/logger.hpp"
 #include "../util/constants.hpp"
+
 using namespace nova::renderer;
 using namespace shaderpack;
 using namespace rhi;
 
 namespace nova::bf {
-    constexpr PixelFormatEnum UI_IMAGE_FORMAT = PixelFormatEnum::RGBA8;
-
     struct UiDrawParams {
         glm::mat4 projection;
     };
@@ -47,8 +46,6 @@ namespace nova::bf {
         init_nuklear();
 
         register_input_callbacks();
-
-        create_textures();
     }
 
     NuklearDevice::~NuklearDevice() {
@@ -85,6 +82,26 @@ namespace nova::bf {
         }
 
         nk_input_end(ctx.get());
+    }
+
+    NuklearImage NuklearDevice::create_image(const std::string& name, const std::size_t width, const std::size_t height) {
+        const auto idx = next_image_idx;
+        next_image_idx++;
+
+        TextureCreateInfo create_info = {};
+        create_info.name = name;
+        create_info.usage = ImageUsage::SampledImage;
+        create_info.format.pixel_format = PixelFormatEnum::RGBA8;
+        create_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
+        create_info.format.width = width;
+        create_info.format.height = height;
+
+        Image* image = renderer.get_engine()->create_image(create_info);
+        textures.emplace(next_image_idx, image);
+
+        const struct nk_image nk_image = nk_image_id(static_cast<int>(next_image_idx));
+
+        return {image, nk_image};
     }
 
     void NuklearDevice::render_ui(CommandList* cmds, FrameContext& frame_ctx) {
@@ -131,7 +148,10 @@ namespace nova::bf {
                 continue;
             }
 
-            const int tex_index = cmd->texture.id;
+            // TODO: Record MultiDrawIndirect commands for them, just for fun
+            // Maybe save that in a secondary command list and avoid re-recording?
+
+            /*const int tex_index = cmd->texture.id;
             const auto tex_itr = textures.find(tex_index);
             if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
                 current_descriptor_textures.emplace_back(tex_itr->second);
@@ -152,8 +172,8 @@ namespace nova::bf {
                                    info.image_info.image = image;
                                    info.image_info.format.pixel_format = UI_IMAGE_FORMAT;
                                    info.image_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
-                                   info.image_info.format.width = FONT_ATLAS_TEXTURE_WIDTH;
-                                   info.image_info.format.height = FONT_ATLAS_TEXTURE_HEIGHT;
+                                   info.image_info.format.width = UI_ATLAS_WIDTH;
+                                   info.image_info.format.height = UI_ATLAS_HEIGHT;
                                    return info;
                                });
 
@@ -161,17 +181,17 @@ namespace nova::bf {
 
                 num_sets_used++;
                 ++descriptor_set_itr;
-            }
+            }*/
         }
 
         NOVA_LOG(INFO) << "Used " << num_sets_used << " descriptor sets. Maybe you should only use one";
 
         const auto [verts, indices] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
 
-        cmds->bind_descriptor_sets(sets, nullptr); // TODO: Command list should store the pipeline interface internally 
+        cmds->bind_descriptor_sets(sets, nullptr); // TODO: Command list should store the pipeline interface internally
         cmds->bind_vertex_buffers({verts, verts, verts});
         cmds->bind_index_buffer(indices);
-        cmds->draw_indexed_mesh(35, 1); // TODO: Figure out how many indices
+        cmds->draw_indexed_mesh(indices->size / sizeof(uint32_t), 1);
     }
 
     void NuklearDevice::init_nuklear() {
@@ -180,8 +200,6 @@ namespace nova::bf {
         nk_buffer_init_fixed(&vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
         nk_buffer_init_fixed(&index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
     }
-
-    void NuklearDevice::create_textures() { TextureCreateInfo; }
 
     void NuklearDevice::register_input_callbacks() {
         const auto window = renderer.get_window();

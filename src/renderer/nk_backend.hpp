@@ -29,10 +29,22 @@ namespace nova {
     }     // namespace renderer
 
     namespace bf {
+        struct NuklearImage {
+            renderer::rhi::Image* image;
+
+            struct nk_image nk_image;
+        };
+
         struct NuklearVertex {
             glm::vec2 position;
             glm::vec2 uv;
             glm::u8vec4 color;
+        };
+
+        enum class ImageId {
+            UiAtlas,
+
+            Count, // Must always be last
         };
 
         /*!
@@ -45,12 +57,14 @@ namespace nova {
 
             ~NuklearDevice();
 
-            std::shared_ptr<nk_context> get_context() const;
+            [[nodiscard]] std::shared_ptr<nk_context> get_context() const;
 
             /*!
              * \brief Begins a frame by doing things like input handling
              */
             void consume_input();
+
+            [[nodiscard]] NuklearImage create_image(const std::string& name, const std::size_t width, const std::size_t height);
 
         private:
             std::shared_ptr<nk_context> ctx;
@@ -87,16 +101,14 @@ namespace nova {
              */
             std::vector<renderer::rhi::DescriptorSet*> sets;
             std::unordered_map<int, renderer::rhi::Image*> textures;
+            uint32_t next_image_idx = static_cast<uint32_t>(ImageId::Count);
 
             void init_nuklear();
-            void create_textures();
 
+        protected:
             /*!
              * \brief Renders all the UI elements that were drawn to the context
              */
-            void render(renderer::rhi::CommandList* cmds);
-
-        protected:
             void render_ui(renderer::rhi::CommandList* cmds, renderer::FrameContext& frame_ctx) override;
         };
     } // namespace bf
