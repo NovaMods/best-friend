@@ -2,13 +2,52 @@
 
 #include <nova_renderer/nova_renderer.hpp>
 
+#include "../external/nova-renderer/src/util/logger.hpp"
 #include "ec/entity.hpp"
+#include "renderer/nk_backend.hpp"
 #include "ui/train_selection_panel.hpp"
 #include "world/world.hpp"
-#include "renderer/nk_backend.hpp"
+
+void setup_logger() {
+    auto error_log = std::make_shared<std::ofstream>();
+    error_log->open("test_error_log.log");
+    auto test_log = std::make_shared<std::ofstream>("test_log.log");
+    auto& log = nova::renderer::Logger::instance;
+    log.add_log_handler(nova::renderer::TRACE, [test_log](auto msg) {
+        std::cout << "TRACE: " << msg.c_str() << std::endl;
+        *test_log << "TRACE: " << msg.c_str() << std::endl;
+    });
+    log.add_log_handler(nova::renderer::DEBUG, [test_log](auto msg) {
+        std::cout << "DEBUG: " << msg.c_str() << std::endl;
+        *test_log << "DEBUG: " << msg.c_str() << std::endl;
+    });
+    log.add_log_handler(nova::renderer::INFO, [test_log](auto msg) {
+        std::cout << "INFO: " << msg.c_str() << std::endl;
+        *test_log << "INFO: " << msg.c_str() << std::endl;
+    });
+    log.add_log_handler(nova::renderer::WARN, [test_log](auto msg) {
+        std::cerr << "WARN: " << msg.c_str() << std::endl;
+        *test_log << "WARN: " << msg.c_str() << std::endl;
+    });
+    log.add_log_handler(nova::renderer::ERROR, [test_log, error_log](auto msg) {
+        std::cerr << "ERROR: " << msg.c_str() << std::endl;
+        *error_log << "ERROR: " << msg.c_str() << std::endl << std::flush;
+        *test_log << "ERROR: " << msg.c_str() << std::endl;
+    });
+    log.add_log_handler(nova::renderer::FATAL, [test_log, error_log](auto msg) {
+        std::cerr << "FATAL: " << msg.c_str() << std::endl;
+        *error_log << "FATAL: " << msg.c_str() << std::endl << std::flush;
+        *test_log << "FATAL: " << msg.c_str() << std::endl;
+    });
+    log.add_log_handler(nova::renderer::MAX_LEVEL, [test_log, error_log](auto msg) {
+        std::cerr << "MAX_LEVEL: " << msg.c_str() << std::endl;
+        *error_log << "MAX_LEVEL: " << msg.c_str() << std::endl << std::flush;
+        *test_log << "MAX_LEVEL: " << msg.c_str() << std::endl;
+    });
+}
 
 int main(int argc, const char** argv) {
-    std::cout << "Hello, world!";
+    setup_logger();
 
     nova::renderer::NovaSettings settings;
 #ifndef NDEBUG
@@ -39,7 +78,7 @@ int main(int argc, const char** argv) {
     // Instantiate the basic entities
     // TODO: Make something more better
     nova::ec::Entity* train_selection_entity = new nova::ec::Entity();
-    train_selection_entity->add_component<TrainSelectionPanel>(nuklear_device->get_context());
+    train_selection_entity->add_component<nova::bf::TrainSelectionPanel>(nuklear_device->get_context());
     world->add_entity(train_selection_entity);
 
     const auto& window = renderer.get_window();
