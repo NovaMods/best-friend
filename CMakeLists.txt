@@ -61,3 +61,4 @@ source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${BEST_FRIEND_SOURCES})
 add_executable(best-friend ${BEST_FRIEND_SOURCES})
 target_link_libraries(best-friend PRIVATE nova-renderer) # bve-native)  TODO: Figure out calling cargo and whatnot
 target_include_directories(best-friend PRIVATE ${CMAKE_CURRENT_LIST_DIR}/external/nova_renderer/include)
+target_compile_definitions(best-friend PRIVATE _CRT_SECURE_NO_WARNINGS)

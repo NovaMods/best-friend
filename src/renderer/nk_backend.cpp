@@ -7,10 +7,10 @@
 #define NK_GLFW_GL4_IMPLEMENTATION
 #include <nuklear.h>
 
-#include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
-#include "../../external/nova-renderer/src/util/logger.hpp"
-#include "../util/constants.hpp"
+#include "nova_renderer/util/logger.hpp"
 
+#include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
+#include "../util/constants.hpp"
 using namespace nova::renderer;
 using namespace shaderpack;
 using namespace rhi;
@@ -195,6 +195,9 @@ namespace nova::bf {
     }
 
     void NuklearDevice::init_nuklear() {
+        ctx = std::make_shared<nk_context>();
+        nk_init_default(&(*ctx), nullptr);
+
         nk_buffer_init_default(&nk_cmds);
 
         nk_buffer_init_fixed(&vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);

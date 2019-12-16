@@ -2,7 +2,8 @@
 
 #include <nova_renderer/nova_renderer.hpp>
 
-#include "../external/nova-renderer/src/util/logger.hpp"
+#include "nova_renderer/util/logger.hpp"
+
 #include "ec/entity.hpp"
 #include "renderer/nk_backend.hpp"
 #include "ui/train_selection_panel.hpp"
@@ -69,8 +70,7 @@ int main(int argc, const char** argv) {
     renderer.set_num_meshes(32); // Best guess, should fix when we know more
 
     std::unique_ptr<World> world = std::make_unique<World>();
-
-    std::shared_ptr<nova::bf::NuklearDevice> nuklear_device = std::make_shared<nova::bf::NuklearDevice>(renderer);
+    const std::shared_ptr<nova::bf::NuklearDevice> nuklear_device = std::make_shared<nova::bf::NuklearDevice>(renderer);
 
     // TODO: Load the renderpack _after_ registering the UI render pass
     renderer.set_ui_renderpass(nuklear_device);
@@ -96,7 +96,7 @@ int main(int argc, const char** argv) {
         frame_start_time = static_cast<double>(std::clock());
 
         if(frame_counter % 100 == 0) {
-            std::cout << "Frame " << frame_counter << " took " << last_frame_duration << "ms\n";
+            NOVA_LOG(INFO) << "Frame " << frame_counter << " took " << last_frame_duration << "ms\n";
         }
 
         world->tick(last_frame_duration);
