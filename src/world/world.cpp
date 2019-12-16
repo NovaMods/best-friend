@@ -15,14 +15,14 @@ void World::remove_entity(nova::ec::Entity* entity) {
         return entity_to_test->get_id() == entity->get_id();
     });
 
-    if(itr) {
-        itr->world = nullptr;
+    if(itr != entities.end()) {
+        (*itr)->world = nullptr;
         entities.erase(itr);
     }
 }
 
 void World::tick(const double delta_time) {
-    for(const auto* entity : entities) {
+    for(auto* entity : entities) {
         entity->tick(delta_time);
     }
 }

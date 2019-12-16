@@ -49,8 +49,6 @@ namespace nova::bf {
         register_input_callbacks();
 
         create_textures();
-
-        renderer.register_ui_draw_function([&](CommandList* cmds) { render(cmds); });
     }
 
     NuklearDevice::~NuklearDevice() {
@@ -89,7 +87,7 @@ namespace nova::bf {
         nk_input_end(ctx.get());
     }
 
-    void NuklearDevice::render(CommandList* cmds) {
+    void NuklearDevice::render_ui(CommandList* cmds, FrameContext& frame_ctx) {
         static const nk_draw_vertex_layout_element vertex_layout[] =
             {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
              {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
@@ -136,7 +134,7 @@ namespace nova::bf {
             const int tex_index = cmd->texture.id;
             const auto tex_itr = textures.find(tex_index);
             if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
-                current_descriptor_textures.emplace_back(*tex_itr);
+                current_descriptor_textures.emplace_back(tex_itr->second);
 
             } else {
                 std::vector<DescriptorSetWrite> writes(1);
@@ -144,11 +142,11 @@ namespace nova::bf {
                 write.set = *descriptor_set_itr;
                 write.first_binding = 0;
                 write.type = DescriptorType::CombinedImageSampler;
-                write.bindings.reserve(current_descriptor_textures.size());
+                write.resources.reserve(current_descriptor_textures.size());
 
                 std::transform(current_descriptor_textures.begin(),
                                current_descriptor_textures.end(),
-                               std::back_insert_iterator<std::vector<DescriptorResourceInfo>>(write.bindings),
+                               std::back_insert_iterator<std::vector<DescriptorResourceInfo>>(write.resources),
                                [&](Image* image) {
                                    DescriptorResourceInfo info = {};
                                    info.image_info.image = image;
@@ -168,7 +166,7 @@ namespace nova::bf {
 
         NOVA_LOG(INFO) << "Used " << num_sets_used << " descriptor sets. Maybe you should only use one";
 
-        const auto [verts, indices] = mesh->get_buffers_for_frame(renderer.get_current_frame_index());
+        const auto [verts, indices] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
 
         cmds->bind_descriptor_sets(sets, nullptr); // TODO: Command list should store the pipeline interface internally 
         cmds->bind_vertex_buffers({verts, verts, verts});
@@ -183,7 +181,7 @@ namespace nova::bf {
         nk_buffer_init_fixed(&index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
     }
 
-    void NuklearDevice::create_texture() { shaderpack::TextureCreateInfo; }
+    void NuklearDevice::create_textures() { TextureCreateInfo; }
 
     void NuklearDevice::register_input_callbacks() {
         const auto window = renderer.get_window();

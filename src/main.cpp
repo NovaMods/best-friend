@@ -5,6 +5,7 @@
 #include "ec/entity.hpp"
 #include "ui/train_selection_panel.hpp"
 #include "world/world.hpp"
+#include "renderer/nk_backend.hpp"
 
 int main(int argc, const char** argv) {
     std::cout << "Hello, world!";
@@ -30,15 +31,18 @@ int main(int argc, const char** argv) {
 
     std::unique_ptr<World> world = std::make_unique<World>();
 
-    std::shared_ptr<nk_context> nk_ctx; // TODO
+    std::shared_ptr<nova::bf::NuklearDevice> nuklear_device = std::make_shared<nova::bf::NuklearDevice>(renderer);
+
+    // TODO: Load the renderpack _after_ registering the UI render pass
+    renderer.set_ui_renderpass(nuklear_device);
 
     // Instantiate the basic entities
     // TODO: Make something more better
     nova::ec::Entity* train_selection_entity = new nova::ec::Entity();
-    train_selection_entity->add_component<TrainSelectionPanel>(nk_ctx);
+    train_selection_entity->add_component<TrainSelectionPanel>(nuklear_device->get_context());
     world->add_entity(train_selection_entity);
 
-    nova::renderer::Window& window = renderer.get_engine()->get_window();
+    const auto& window = renderer.get_window();
 
     auto frame_start_time = static_cast<double>(std::clock());
     auto frame_end_time = static_cast<double>(std::clock());
@@ -47,7 +51,7 @@ int main(int argc, const char** argv) {
     // Number of frames since program start
     uint64_t frame_counter = 0;
 
-    while(!window.should_close()) {
+    while(!window->should_close()) {
         // Main loop!
 
         frame_start_time = static_cast<double>(std::clock());

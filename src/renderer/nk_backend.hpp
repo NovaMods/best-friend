@@ -3,6 +3,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include <nova_renderer/frontend/ui_renderer.hpp>
 #include <nova_renderer/renderables.hpp>
 #include <nova_renderer/util/container_accessor.hpp>
 #include <nuklear.h>
@@ -37,7 +38,7 @@ namespace nova {
         /*!
          * \brief Renders the Nuklear UI
          */
-        class NuklearDevice final {
+        class NuklearDevice final : public renderer::UiRenderpass {
         public:
             void register_input_callbacks();
             explicit NuklearDevice(renderer::NovaRenderer& renderer);
@@ -87,13 +88,16 @@ namespace nova {
             std::vector<renderer::rhi::DescriptorSet*> sets;
             std::unordered_map<int, renderer::rhi::Image*> textures;
 
-			void init_nuklear();
+            void init_nuklear();
             void create_textures();
 
-			/*!
-			 * \brief Renders all the UI elements that were drawn to the context
-			 */
-			void render(renderer::rhi::CommandList* cmds);
+            /*!
+             * \brief Renders all the UI elements that were drawn to the context
+             */
+            void render(renderer::rhi::CommandList* cmds);
+
+        protected:
+            void render_ui(renderer::rhi::CommandList* cmds, renderer::FrameContext& frame_ctx) override;
         };
     } // namespace bf
 } // namespace nova

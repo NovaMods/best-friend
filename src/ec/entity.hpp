@@ -60,7 +60,7 @@ namespace nova::ec {
                 return nullptr;
             }
 
-            ComponentType* new_component = new ComponentType(this, std::forward(args...));
+            ComponentType* new_component = new ComponentType(this, args...);
             components.push_back(new_component);
 
             return new_component;
@@ -76,7 +76,7 @@ namespace nova::ec {
         }
 
     private:
-        static uint64_t next_id = 0;
+        inline static uint64_t next_id;
         uint64_t id;
 
         /*!
