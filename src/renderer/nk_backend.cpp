@@ -16,7 +16,7 @@ using namespace shaderpack;
 using namespace rhi;
 
 namespace nova::bf {
-    const std::string FONT_PATH = BEST_FRIEND_DATA_DIR "fonts/Cousine-Regular.ttf";
+    const std::string FONT_PATH = BEST_FRIEND_DATA_DIR "fonts/DroidSans.ttf";
 
     const std::string FONT_ATLAS_NAME = "BestFriendFontAtlas";
 
