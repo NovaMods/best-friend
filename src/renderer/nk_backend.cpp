@@ -200,6 +200,8 @@ namespace nova::bf {
         cmds->bind_vertex_buffers({verts, verts, verts});
         cmds->bind_index_buffer(indices);
         cmds->draw_indexed_mesh(indices->size / sizeof(uint32_t), 1);
+
+        nk_clear(ctx.get());
     }
 
     void NuklearDevice::init_nuklear() {

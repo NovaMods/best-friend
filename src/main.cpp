@@ -10,6 +10,7 @@
 #include "world/world.hpp"
 
 void setup_logger() {
+    // TODO: Nova needs a better way to handle this
     auto error_log = std::make_shared<std::ofstream>();
     error_log->open("test_error_log.log");
     auto test_log = std::make_shared<std::ofstream>("test_log.log");
@@ -100,6 +101,8 @@ int main(int argc, const char** argv) {
         }
 
         world->tick(last_frame_duration);
+
+        renderer.execute_frame();
 
         frame_end_time = static_cast<double>(std::clock());
         last_frame_duration = (frame_end_time - frame_start_time) / CLOCKS_PER_SEC;
