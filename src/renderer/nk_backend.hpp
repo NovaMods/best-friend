@@ -42,7 +42,7 @@ namespace nova {
         };
 
         enum class ImageId {
-            UiAtlas,
+            FontAtlas,
 
             Count, // Must always be last
         };
@@ -52,7 +52,6 @@ namespace nova {
          */
         class NuklearDevice final : public renderer::UiRenderpass {
         public:
-            void register_input_callbacks();
             explicit NuklearDevice(renderer::NovaRenderer& renderer);
 
             ~NuklearDevice();
@@ -83,8 +82,6 @@ namespace nova {
             std::vector<uint32_t> indices;
             nk_buffer index_buffer;
 
-            nk_draw_null_texture null;
-
             std::mutex key_buffer_mutex;
 
             /*!
@@ -103,7 +100,19 @@ namespace nova {
             std::unordered_map<int, renderer::rhi::Image*> textures;
             uint32_t next_image_idx = static_cast<uint32_t>(ImageId::Count);
 
+            std::unique_ptr<nk_font_atlas> nk_atlas;
+            nk_draw_null_texture null_texture;
+            NuklearImage font_image;
+            nk_font* font;
             void init_nuklear();
+
+            void create_textures();
+
+            void load_font();
+
+            void retrieve_font_atlas();
+
+            void register_input_callbacks();
 
         protected:
             /*!

@@ -16,6 +16,10 @@ using namespace shaderpack;
 using namespace rhi;
 
 namespace nova::bf {
+    const std::string FONT_PATH = BEST_FRIEND_DATA_DIR "fonts/Cousine-Regular.ttf";
+
+    const std::string FONT_ATLAS_NAME = "BestFriendFontAtlas";
+
     struct UiDrawParams {
         glm::mat4 projection;
     };
@@ -45,6 +49,10 @@ namespace nova::bf {
 
         init_nuklear();
 
+        create_textures();
+
+        load_font();
+
         register_input_callbacks();
     }
 
@@ -69,14 +77,14 @@ namespace nova::bf {
         keys.clear();
 
         // Update NK with the current mouse position
-        nk_input_motion(ctx.get(), most_recent_mouse_position.x, most_recent_mouse_position.y);
+        nk_input_motion(ctx.get(), static_cast<int>(most_recent_mouse_position.x), static_cast<int>(most_recent_mouse_position.y));
 
         // Consume the most recent mouse button
         if(most_recent_mouse_button) {
             nk_input_button(ctx.get(),
                             most_recent_mouse_button->first,
-                            most_recent_mouse_position.x,
-                            most_recent_mouse_position.y,
+                            static_cast<int>(most_recent_mouse_position.x),
+                            static_cast<int>(most_recent_mouse_position.y),
                             most_recent_mouse_button->second);
             most_recent_mouse_button = {};
         }
@@ -93,8 +101,8 @@ namespace nova::bf {
         create_info.usage = ImageUsage::SampledImage;
         create_info.format.pixel_format = PixelFormatEnum::RGBA8;
         create_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
-        create_info.format.width = width;
-        create_info.format.height = height;
+        create_info.format.width = static_cast<float>(width);
+        create_info.format.height = static_cast<float>(height);
 
         Image* image = renderer.get_engine()->create_image(create_info);
         textures.emplace(next_image_idx, image);
@@ -115,7 +123,7 @@ namespace nova::bf {
         config.vertex_layout = vertex_layout;
         config.vertex_size = sizeof(NuklearVertex);
         config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
-        config.null = null;
+        config.null = null_texture;
         config.circle_segment_count = 22;
         config.curve_segment_count = 22;
         config.arc_segment_count = 22;
@@ -202,6 +210,34 @@ namespace nova::bf {
 
         nk_buffer_init_fixed(&vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
         nk_buffer_init_fixed(&index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
+    }
+
+    void NuklearDevice::create_textures() {
+        //Create the null texture
+    }
+
+    void NuklearDevice::load_font() {
+        nk_atlas = std::make_unique<nk_font_atlas>();
+        nk_font_atlas_init_default(nk_atlas.get());
+        nk_font_atlas_begin(nk_atlas.get());
+
+        // Todo: load a font
+        font = nk_font_atlas_add_from_file(nk_atlas.get(), FONT_PATH.c_str(), 14, nullptr);
+        if(!font) {
+            NOVA_LOG(ERROR) << "Could not load font " << FONT_PATH;
+        }
+
+        retrieve_font_atlas();
+
+        nk_font_atlas_end(nk_atlas.get(), nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &null_texture);
+        nk_style_set_font(ctx.get(), &font->handle);
+    }
+
+    void NuklearDevice::retrieve_font_atlas() {
+        int width, height;
+        const void* image_data = nk_font_atlas_bake(nk_atlas.get(), &width, &height, NK_FONT_ATLAS_RGBA32);
+
+        font_image = create_image(FONT_ATLAS_NAME, width, height);
     }
 
     void NuklearDevice::register_input_callbacks() {
@@ -332,6 +368,9 @@ namespace nova::bf {
 
             case GLFW_MOUSE_BUTTON_RIGHT:
                 return NK_BUTTON_RIGHT;
+
+            default:
+                return NK_BUTTON_LEFT;
         }
     }
 
