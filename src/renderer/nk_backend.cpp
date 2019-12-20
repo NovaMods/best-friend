@@ -2,6 +2,7 @@
 
 #include <nova_renderer/frontend/procedural_mesh.hpp>
 #include <nova_renderer/nova_renderer.hpp>
+#include <nova_renderer/rhi/swapchain.hpp>
 
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL4_IMPLEMENTATION
@@ -36,7 +37,9 @@ namespace nova::bf {
     nk_buttons to_nk_mouse_button(uint32_t button);
 
     NuklearDevice::NuklearDevice(NovaRenderer& renderer)
-        : renderer(renderer), mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
+        : UiRenderpass(renderer.get_engine(), renderer.get_engine()->get_swapchain()->get_size()),
+          renderer(renderer),
+          mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
         // TODO: Some way to validate that this pass exists in the loaded shaderpack
         const FullMaterialPassName& ui_full_material_pass_name = {"UI", "Color"};
@@ -50,6 +53,8 @@ namespace nova::bf {
         init_nuklear();
 
         create_textures();
+
+        create_pipeline();
 
         load_font();
 
@@ -196,7 +201,8 @@ namespace nova::bf {
 
         const auto [verts, indices] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
 
-        cmds->bind_descriptor_sets(sets, nullptr); // TODO: Command list should store the pipeline interface internally
+        cmds->bind_pipeline(pipeline);
+        cmds->bind_descriptor_sets(sets, pipeline_interface); // TODO: Command list should store the pipeline interface internally
         cmds->bind_vertex_buffers({verts, verts, verts});
         cmds->bind_index_buffer(indices);
         cmds->draw_indexed_mesh(indices->size / sizeof(uint32_t), 1);
@@ -215,7 +221,55 @@ namespace nova::bf {
     }
 
     void NuklearDevice::create_textures() {
-        //Create the null texture
+        // Create the null texture
+    }
+
+    void NuklearDevice::create_pipeline() {
+        auto* device = renderer.get_engine();
+
+        ResourceBindingDescription ui_tex_desc = {};
+        ui_tex_desc.set = 0;
+        ui_tex_desc.binding = 0;
+        ui_tex_desc.count = device->info.max_unbounded_array_size;
+        ui_tex_desc.is_unbounded = true;
+        ui_tex_desc.type = DescriptorType::CombinedImageSampler;
+        ui_tex_desc.stages = ShaderStageFlags::Fragment;
+
+        std::unordered_map<std::string, ResourceBindingDescription> bindings;
+        bindings.emplace("ui_textures", ui_tex_desc);
+
+        TextureAttachmentInfo color_rtv_info = {};
+        color_rtv_info.name = BACKBUFFER_NAME;
+        color_rtv_info.pixel_format = PixelFormatEnum::RGBA8;
+        color_rtv_info.clear = false;
+
+        device->create_pipeline_interface(bindings, {color_rtv_info}, {})
+            .map([&](PipelineInterface* pipeline_interface) {
+                this->pipeline_interface = pipeline_interface;
+                PipelineCreateInfo pipe_info = {};
+                pipe_info.name = UI_PIPELINE_NAME;
+                pipe_info.pass = UI_RENDER_PASS_NAME;
+                pipe_info.states = {StateEnum::DisableDepthTest,
+                                    StateEnum::DisableDepthWrite,
+                                    StateEnum::Blending,
+                                    StateEnum::StencilWrite,
+                                    StateEnum::EnableStencilTest};
+                pipe_info.vertex_fields = {{"POSITION", VertexFieldEnum::Position},
+                                           {"TEXCOORD", VertexFieldEnum::UV0},
+                                           {"COLOR", VertexFieldEnum::Color},
+                                           {"INDEX", VertexFieldEnum::McEntityId}};
+                // TODO: fill in the rest of the pipeline info
+
+                device->create_pipeline(pipeline_interface, pipe_info)
+                    .map([&](rhi::Pipeline* pipe) {
+                        this->pipeline = pipe;
+                        return true;
+                    })
+                    .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline: " << err.to_string(); });
+
+                return true;
+            })
+            .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline interface: " << err.to_string() });
     }
 
     void NuklearDevice::load_font() {

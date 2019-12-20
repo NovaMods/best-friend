@@ -61,7 +61,7 @@ int main(int argc, const char** argv) {
     settings.window.height = 480;
 
 #if WIN32
-    settings.api = nova::renderer::GraphicsApi::D3D12;
+    settings.api = nova::renderer::GraphicsApi::Vulkan;
 #else
     settings.api = nova::renderer::GraphicsApi::Vulkan;
 #endif
