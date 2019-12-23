@@ -106,6 +106,7 @@ namespace nova {
             nk_font* font;
             renderer::rhi::Pipeline* pipeline;
             renderer::rhi::PipelineInterface* pipeline_interface;
+
             void init_nuklear();
 
             void create_textures();

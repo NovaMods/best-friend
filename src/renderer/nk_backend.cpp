@@ -12,6 +12,7 @@
 
 #include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
 #include "../util/constants.hpp"
+
 using namespace nova::renderer;
 using namespace shaderpack;
 using namespace rhi;
@@ -20,6 +21,10 @@ namespace nova::bf {
     const std::string FONT_PATH = BEST_FRIEND_DATA_DIR "fonts/DroidSans.ttf";
 
     const std::string FONT_ATLAS_NAME = "BestFriendFontAtlas";
+
+    constexpr shaderpack::PixelFormatEnum UI_ATLAS_FORMAT = PixelFormatEnum::RGBA8;
+    constexpr std::size_t UI_ATLAS_WIDTH = 512;
+    constexpr std::size_t UI_ATLAS_HEIGHT = 512;
 
     struct UiDrawParams {
         glm::mat4 projection;
@@ -42,7 +47,7 @@ namespace nova::bf {
           mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
         // TODO: Some way to validate that this pass exists in the loaded shaderpack
-        const FullMaterialPassName& ui_full_material_pass_name = {"UI", "Color"};
+        const FullMaterialPassName& ui_full_material_pass_name = {"BestFriendGUI", "BestFriendGUI"};
         StaticMeshRenderableData ui_renderable_data = {};
         ui_renderable_data.mesh = mesh.get_key();
         ui_renderable_id = renderer.add_renderable_for_material(ui_full_material_pass_name, ui_renderable_data);
@@ -164,7 +169,7 @@ namespace nova::bf {
             // TODO: Record MultiDrawIndirect commands for them, just for fun
             // Maybe save that in a secondary command list and avoid re-recording?
 
-            /*const int tex_index = cmd->texture.id;
+            const int tex_index = cmd->texture.id;
             const auto tex_itr = textures.find(tex_index);
             if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
                 current_descriptor_textures.emplace_back(tex_itr->second);
@@ -183,7 +188,7 @@ namespace nova::bf {
                                [&](Image* image) {
                                    DescriptorResourceInfo info = {};
                                    info.image_info.image = image;
-                                   info.image_info.format.pixel_format = UI_IMAGE_FORMAT;
+                                   info.image_info.format.pixel_format = UI_ATLAS_FORMAT;
                                    info.image_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
                                    info.image_info.format.width = UI_ATLAS_WIDTH;
                                    info.image_info.format.height = UI_ATLAS_HEIGHT;
@@ -194,18 +199,12 @@ namespace nova::bf {
 
                 num_sets_used++;
                 ++descriptor_set_itr;
-            }*/
+            }
         }
 
-        NOVA_LOG(INFO) << "Used " << num_sets_used << " descriptor sets. Maybe you should only use one";
-
-        const auto [verts, indices] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
-
-        cmds->bind_pipeline(pipeline);
-        cmds->bind_descriptor_sets(sets, pipeline_interface); // TODO: Command list should store the pipeline interface internally
-        cmds->bind_vertex_buffers({verts, verts, verts});
-        cmds->bind_index_buffer(indices);
-        cmds->draw_indexed_mesh(indices->size / sizeof(uint32_t), 1);
+        if(num_sets_used > 1) {
+            NOVA_LOG(INFO) << "Used " << num_sets_used << " descriptor sets. Maybe you should only use one";
+        }
 
         nk_clear(ctx.get());
     }
@@ -269,7 +268,7 @@ namespace nova::bf {
 
                 return true;
             })
-            .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline interface: " << err.to_string() });
+            .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline interface: " << err.to_string(); });
     }
 
     void NuklearDevice::load_font() {
