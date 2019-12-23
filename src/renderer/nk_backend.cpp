@@ -46,6 +46,8 @@ namespace nova::bf {
           renderer(renderer),
           mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
+        allocator = std::make_unique<mem::AllocatorHandle<>>(std::pmr::get_default_resource());
+
         // TODO: Some way to validate that this pass exists in the loaded shaderpack
         const FullMaterialPassName& ui_full_material_pass_name = {"BestFriendGUI", "BestFriendGUI"};
         StaticMeshRenderableData ui_renderable_data = {};
@@ -114,7 +116,7 @@ namespace nova::bf {
         create_info.format.width = static_cast<float>(width);
         create_info.format.height = static_cast<float>(height);
 
-        Image* image = renderer.get_engine()->create_image(create_info);
+        Image* image = renderer.get_engine()->create_image(create_info, *allocator);
         textures.emplace(next_image_idx, image);
 
         const struct nk_image nk_image = nk_image_id(static_cast<int>(next_image_idx));
@@ -152,7 +154,7 @@ namespace nova::bf {
         // draw HOWEVER, we should keep a buffer of meshes that we already used so we don't constantly reallocate meshes
 
         // Textures to bind to the current descriptor set
-        std::vector<Image*> current_descriptor_textures;
+        std::pmr::vector<Image*> current_descriptor_textures(*frame_ctx.allocator);
         current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
 
         // Iterator to the descriptor set to write the current textures to
@@ -175,7 +177,7 @@ namespace nova::bf {
                 current_descriptor_textures.emplace_back(tex_itr->second);
 
             } else {
-                std::vector<DescriptorSetWrite> writes(1);
+                std::pmr::vector<DescriptorSetWrite> writes(1, {}, *frame_ctx.allocator);
                 DescriptorSetWrite& write = writes[0];
                 write.set = *descriptor_set_itr;
                 write.first_binding = 0;
@@ -184,7 +186,7 @@ namespace nova::bf {
 
                 std::transform(current_descriptor_textures.begin(),
                                current_descriptor_textures.end(),
-                               std::back_insert_iterator<std::vector<DescriptorResourceInfo>>(write.resources),
+                               std::back_insert_iterator<std::pmr::vector<DescriptorResourceInfo>>(write.resources),
                                [&](Image* image) {
                                    DescriptorResourceInfo info = {};
                                    info.image_info.image = image;
@@ -229,7 +231,7 @@ namespace nova::bf {
         ResourceBindingDescription ui_tex_desc = {};
         ui_tex_desc.set = 0;
         ui_tex_desc.binding = 0;
-        ui_tex_desc.count = device->info.max_unbounded_array_size;
+        ui_tex_desc.count = 65536;  // TODO: device->info.max_unbounded_array_size;
         ui_tex_desc.is_unbounded = true;
         ui_tex_desc.type = DescriptorType::CombinedImageSampler;
         ui_tex_desc.stages = ShaderStageFlags::Fragment;
@@ -242,7 +244,7 @@ namespace nova::bf {
         color_rtv_info.pixel_format = PixelFormatEnum::RGBA8;
         color_rtv_info.clear = false;
 
-        device->create_pipeline_interface(bindings, {color_rtv_info}, {})
+        device->create_pipeline_interface(bindings, {color_rtv_info}, {}, *allocator)
             .map([&](PipelineInterface* pipeline_interface) {
                 this->pipeline_interface = pipeline_interface;
                 PipelineCreateInfo pipe_info = {};
@@ -259,7 +261,7 @@ namespace nova::bf {
                                            {"INDEX", VertexFieldEnum::McEntityId}};
                 // TODO: fill in the rest of the pipeline info
 
-                device->create_pipeline(pipeline_interface, pipe_info)
+                device->create_pipeline(pipeline_interface, pipe_info, *allocator)
                     .map([&](rhi::Pipeline* pipe) {
                         this->pipeline = pipe;
                         return true;

@@ -6,6 +6,7 @@
 #include <nova_renderer/frontend/ui_renderer.hpp>
 #include <nova_renderer/renderables.hpp>
 #include <nova_renderer/util/container_accessor.hpp>
+#include <nova_renderer/memory/allocators.hpp>
 #include <nuklear.h>
 
 //! \brief Nuklear backend that renders Nuklear geometry with the Nova renderer
@@ -106,6 +107,8 @@ namespace nova {
             nk_font* font;
             renderer::rhi::Pipeline* pipeline;
             renderer::rhi::PipelineInterface* pipeline_interface;
+
+            std::unique_ptr<mem::AllocatorHandle<>> allocator;
 
             void init_nuklear();
 
