@@ -4,10 +4,12 @@
 #include <unordered_map>
 
 #include <nova_renderer/frontend/ui_renderer.hpp>
+#include <nova_renderer/memory/allocators.hpp>
 #include <nova_renderer/renderables.hpp>
 #include <nova_renderer/util/container_accessor.hpp>
-#include <nova_renderer/memory/allocators.hpp>
 #include <nuklear.h>
+
+#include "nova_renderer/frontend/resource_loader.hpp"
 
 //! \brief Nuklear backend that renders Nuklear geometry with the Nova renderer
 //!
@@ -31,9 +33,17 @@ namespace nova {
 
     namespace bf {
         struct NuklearImage {
-            renderer::rhi::Image* image;
+            renderer::TextureResourceAccessor image;
 
             struct nk_image nk_image;
+
+            NuklearImage(renderer::TextureResourceAccessor image, struct nk_image nk_image = {});
+        };
+
+        struct NullNuklearImage : NuklearImage {
+            nk_draw_null_texture nk_null_tex = {};
+
+            NullNuklearImage(renderer::TextureResourceAccessor image, struct nk_image nk_image = {}, nk_draw_null_texture null_tex = {});
         };
 
         struct NuklearVertex {
@@ -64,7 +74,10 @@ namespace nova {
              */
             void consume_input();
 
-            [[nodiscard]] NuklearImage create_image(const std::string& name, const std::size_t width, const std::size_t height);
+            [[nodiscard]] std::optional<NuklearImage> create_image(const std::string& name,
+                                                                   std::size_t width,
+                                                                   std::size_t height,
+                                                                   const void* image_data);
 
         private:
             std::shared_ptr<nk_context> ctx;
@@ -98,12 +111,12 @@ namespace nova {
              * \brief List of all the descriptor sets that can hold an array of textures
              */
             std::vector<renderer::rhi::DescriptorSet*> sets;
-            std::unordered_map<int, renderer::rhi::Image*> textures;
+            std::unordered_map<int, renderer::TextureResourceAccessor> textures;
             uint32_t next_image_idx = static_cast<uint32_t>(ImageId::Count);
 
             std::unique_ptr<nk_font_atlas> nk_atlas;
-            nk_draw_null_texture null_texture;
-            NuklearImage font_image;
+            std::unique_ptr<NullNuklearImage> null_texture;
+            std::unique_ptr<NuklearImage> font_image;
             nk_font* font;
             renderer::rhi::Pipeline* pipeline;
             renderer::rhi::PipelineInterface* pipeline_interface;

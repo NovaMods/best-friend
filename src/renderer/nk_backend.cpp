@@ -22,7 +22,7 @@ namespace nova::bf {
 
     const std::string FONT_ATLAS_NAME = "BestFriendFontAtlas";
 
-    constexpr shaderpack::PixelFormatEnum UI_ATLAS_FORMAT = PixelFormatEnum::RGBA8;
+    constexpr PixelFormatEnum UI_ATLAS_FORMAT = PixelFormatEnum::RGBA8;
     constexpr std::size_t UI_ATLAS_WIDTH = 512;
     constexpr std::size_t UI_ATLAS_HEIGHT = 512;
 
@@ -41,12 +41,19 @@ namespace nova::bf {
 
     nk_buttons to_nk_mouse_button(uint32_t button);
 
+    NuklearImage::NuklearImage(const TextureResourceAccessor image, const struct nk_image nk_image) : image(image), nk_image(nk_image) {}
+
+    NullNuklearImage::NullNuklearImage(const TextureResourceAccessor image,
+                                       const struct nk_image nk_image,
+                                       const nk_draw_null_texture null_tex)
+        : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
+
     NuklearDevice::NuklearDevice(NovaRenderer& renderer)
         : UiRenderpass(renderer.get_engine(), renderer.get_engine()->get_swapchain()->get_size()),
           renderer(renderer),
           mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
-        allocator = std::make_unique<mem::AllocatorHandle<>>(std::pmr::get_default_resource());
+        allocator = std::unique_ptr<mem::AllocatorHandle<>>(renderer.get_global_allocator()->create_suballocator());
 
         // TODO: Some way to validate that this pass exists in the loaded shaderpack
         const FullMaterialPassName& ui_full_material_pass_name = {"BestFriendGUI", "BestFriendGUI"};
@@ -104,24 +111,27 @@ namespace nova::bf {
         nk_input_end(ctx.get());
     }
 
-    NuklearImage NuklearDevice::create_image(const std::string& name, const std::size_t width, const std::size_t height) {
+    std::optional<NuklearImage> NuklearDevice::create_image(const std::string& name,
+                                                            const std::size_t width,
+                                                            const std::size_t height,
+                                                            const void* image_data) {
         const auto idx = next_image_idx;
         next_image_idx++;
 
-        TextureCreateInfo create_info = {};
-        create_info.name = name;
-        create_info.usage = ImageUsage::SampledImage;
-        create_info.format.pixel_format = PixelFormatEnum::RGBA8;
-        create_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
-        create_info.format.width = static_cast<float>(width);
-        create_info.format.height = static_cast<float>(height);
+        auto resource_manager = renderer.get_resource_manager();
+        auto image = resource_manager->create_texture(name, width, height, PixelFormat::Rgba8, image_data, *allocator);
+        if(image) {
+            textures.emplace(next_image_idx, *image);
 
-        Image* image = renderer.get_engine()->create_image(create_info, *allocator);
-        textures.emplace(next_image_idx, image);
+            const struct nk_image nk_image = nk_image_id(static_cast<int>(next_image_idx));
 
-        const struct nk_image nk_image = nk_image_id(static_cast<int>(next_image_idx));
+            return std::make_optional<NuklearImage>(*image, nk_image);
 
-        return {image, nk_image};
+        } else {
+            NOVA_LOG(ERROR) << "Could not create UI image " << name;
+
+            return std::nullopt;
+        }
     }
 
     void NuklearDevice::render_ui(CommandList* cmds, FrameContext& frame_ctx) {
@@ -135,7 +145,7 @@ namespace nova::bf {
         config.vertex_layout = vertex_layout;
         config.vertex_size = sizeof(NuklearVertex);
         config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
-        config.null = null_texture;
+        config.null = null_texture->nk_null_tex;
         config.circle_segment_count = 22;
         config.curve_segment_count = 22;
         config.arc_segment_count = 22;
@@ -174,19 +184,19 @@ namespace nova::bf {
             const int tex_index = cmd->texture.id;
             const auto tex_itr = textures.find(tex_index);
             if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
-                current_descriptor_textures.emplace_back(tex_itr->second);
+                current_descriptor_textures.emplace_back(tex_itr->second->image);
 
             } else {
                 std::pmr::vector<DescriptorSetWrite> writes(1, {}, *frame_ctx.allocator);
                 DescriptorSetWrite& write = writes[0];
                 write.set = *descriptor_set_itr;
-                write.first_binding = 0;
+                write.binding = 0;
                 write.type = DescriptorType::CombinedImageSampler;
                 write.resources.reserve(current_descriptor_textures.size());
 
                 std::transform(current_descriptor_textures.begin(),
                                current_descriptor_textures.end(),
-                               std::back_insert_iterator<std::pmr::vector<DescriptorResourceInfo>>(write.resources),
+                               std::back_insert_iterator(write.resources),
                                [&](Image* image) {
                                    DescriptorResourceInfo info = {};
                                    info.image_info.image = image;
@@ -223,6 +233,13 @@ namespace nova::bf {
 
     void NuklearDevice::create_textures() {
         // Create the null texture
+        const std::optional<NuklearImage> null_image = create_image(NULL_TEXTURE_NAME, 8, 8, nullptr);
+        if(null_image) {
+            null_texture = std::make_unique<NullNuklearImage>(null_image->image, null_image->nk_image);
+
+        } else {
+            NOVA_LOG(ERROR) << "Could not create null texture";
+        }
     }
 
     void NuklearDevice::create_pipeline() {
@@ -231,7 +248,7 @@ namespace nova::bf {
         ResourceBindingDescription ui_tex_desc = {};
         ui_tex_desc.set = 0;
         ui_tex_desc.binding = 0;
-        ui_tex_desc.count = 65536;  // TODO: device->info.max_unbounded_array_size;
+        ui_tex_desc.count = 65536; // TODO: device->info.max_unbounded_array_size;
         ui_tex_desc.is_unbounded = true;
         ui_tex_desc.type = DescriptorType::CombinedImageSampler;
         ui_tex_desc.stages = ShaderStageFlags::Fragment;
@@ -286,7 +303,7 @@ namespace nova::bf {
 
         retrieve_font_atlas();
 
-        nk_font_atlas_end(nk_atlas.get(), nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &null_texture);
+        nk_font_atlas_end(nk_atlas.get(), nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &null_texture->nk_null_tex);
         nk_style_set_font(ctx.get(), &font->handle);
     }
 
@@ -294,7 +311,13 @@ namespace nova::bf {
         int width, height;
         const void* image_data = nk_font_atlas_bake(nk_atlas.get(), &width, &height, NK_FONT_ATLAS_RGBA32);
 
-        font_image = create_image(FONT_ATLAS_NAME, width, height);
+        const auto new_font_atlas = create_image(FONT_ATLAS_NAME, width, height, image_data);
+        if(new_font_atlas) {
+            font_image = std::make_unique<NuklearImage>(new_font_atlas->image, new_font_atlas->nk_image);
+
+        } else {
+            NOVA_LOG(ERROR) << "Could not create font atlas texture";
+        }
     }
 
     void NuklearDevice::register_input_callbacks() {
