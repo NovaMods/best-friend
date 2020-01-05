@@ -276,6 +276,8 @@ namespace nova::bf {
                                            {"TEXCOORD", VertexFieldEnum::UV0},
                                            {"COLOR", VertexFieldEnum::Color},
                                            {"INDEX", VertexFieldEnum::McEntityId}};
+                pipe_info.vertex_shader.source = renderer.get_resource_manager()
+                                                     .load_shader_file("gui.vertex.hlsl", ShaderStage::Vertex);
                 // TODO: fill in the rest of the pipeline info
 
                 device->create_pipeline(pipeline_interface, pipe_info, *allocator)
