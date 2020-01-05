@@ -10,4 +10,6 @@ namespace nova::bf {
     const std::string UI_PIPELINE_NAME = "BestFriendUI";
 
     const std::string NULL_TEXTURE_NAME = "BestFriendNull";
+
+    const std::string SHADERS_PATH;
 } // namespace nova::bf

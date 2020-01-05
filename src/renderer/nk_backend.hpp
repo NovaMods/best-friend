@@ -84,6 +84,8 @@ namespace nova {
 
             renderer::NovaRenderer& renderer;
 
+            glm::vec2 framebuffer_size_ratio;
+
             renderer::rhi::Buffer* ui_draw_params;
 
             renderer::RenderableId ui_renderable_id;
@@ -92,9 +94,9 @@ namespace nova {
 
             renderer::MapAccessor<renderer::MeshId, renderer::ProceduralMesh> mesh;
             std::vector<NuklearVertex> vertices;
-            nk_buffer vertex_buffer;
+            nk_buffer nk_vertex_buffer;
             std::vector<uint32_t> indices;
-            nk_buffer index_buffer;
+            nk_buffer nk_index_buffer;
 
             std::mutex key_buffer_mutex;
 
@@ -134,6 +136,8 @@ namespace nova {
             void retrieve_font_atlas();
 
             void register_input_callbacks();
+
+            void save_framebuffer_size_ratio();
 
         protected:
             /*!

@@ -6,13 +6,13 @@
 
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL4_IMPLEMENTATION
+#include <nova_renderer/loading/shaderpack_loading.hpp>
 #include <nuklear.h>
 
 #include "nova_renderer/util/logger.hpp"
 
 #include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
 #include "../util/constants.hpp"
-
 using namespace nova::renderer;
 using namespace shaderpack;
 using namespace rhi;
@@ -73,6 +73,8 @@ namespace nova::bf {
         load_font();
 
         register_input_callbacks();
+
+        save_framebuffer_size_ratio();
     }
 
     NuklearDevice::~NuklearDevice() {
@@ -154,7 +156,7 @@ namespace nova::bf {
         config.line_AA = NK_ANTI_ALIASING_ON;
 
         // vertex_buffer and index_buffer let Nuklear write vertex information directly
-        nk_convert(ctx.get(), &nk_cmds, &vertex_buffer, &index_buffer, &config);
+        nk_convert(ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
 
         // For each command, add its texture to a texture array and add its mesh data to a mesh
         // When the texture array is full, allocate a new one from the RHI and begin using that for draws
@@ -171,15 +173,13 @@ namespace nova::bf {
         auto descriptor_set_itr = sets.begin();
 
         uint32_t num_sets_used = 0;
+        size_t offset = 0;
 
         for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
             cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
             if(cmd->elem_count == 0) {
                 continue;
             }
-
-            // TODO: Record MultiDrawIndirect commands for them, just for fun
-            // Maybe save that in a secondary command list and avoid re-recording?
 
             const int tex_index = cmd->texture.id;
             const auto tex_itr = textures.find(tex_index);
@@ -212,6 +212,16 @@ namespace nova::bf {
                 num_sets_used++;
                 ++descriptor_set_itr;
             }
+
+            const auto scissor_rect_x = cmd->clip_rect.x * framebuffer_size_ratio.x;
+            const auto scissor_rect_y = cmd->clip_rect.y * framebuffer_size_ratio.y;
+            const auto scissor_rect_width = cmd->clip_rect.w * framebuffer_size_ratio.x;
+            const auto scissor_rect_height = cmd->clip_rect.h * framebuffer_size_ratio.y;
+            cmds->set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
+
+            cmds->draw_indexed_mesh(cmd->elem_count, offset);
+
+            offset += cmd->elem_count;
         }
 
         if(num_sets_used > 1) {
@@ -227,8 +237,8 @@ namespace nova::bf {
 
         nk_buffer_init_default(&nk_cmds);
 
-        nk_buffer_init_fixed(&vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
-        nk_buffer_init_fixed(&index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
+        nk_buffer_init_fixed(&nk_vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
+        nk_buffer_init_fixed(&nk_index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
     }
 
     void NuklearDevice::create_textures() {
@@ -251,7 +261,7 @@ namespace nova::bf {
         ui_tex_desc.count = 65536; // TODO: device->info.max_unbounded_array_size;
         ui_tex_desc.is_unbounded = true;
         ui_tex_desc.type = DescriptorType::CombinedImageSampler;
-        ui_tex_desc.stages = ShaderStageFlags::Fragment;
+        ui_tex_desc.stages = ShaderStage::Fragment;
 
         std::unordered_map<std::string, ResourceBindingDescription> bindings;
         bindings.emplace("ui_textures", ui_tex_desc);
@@ -263,6 +273,8 @@ namespace nova::bf {
 
         device->create_pipeline_interface(bindings, {color_rtv_info}, {}, *allocator)
             .map([&](PipelineInterface* pipeline_interface) {
+                const auto vfs = filesystem::VirtualFilesystem::get_instance()->get_folder_accessor(SHADERS_PATH);
+
                 this->pipeline_interface = pipeline_interface;
                 PipelineCreateInfo pipe_info = {};
                 pipe_info.name = UI_PIPELINE_NAME;
@@ -270,14 +282,15 @@ namespace nova::bf {
                 pipe_info.states = {StateEnum::DisableDepthTest,
                                     StateEnum::DisableDepthWrite,
                                     StateEnum::Blending,
-                                    StateEnum::StencilWrite,
-                                    StateEnum::EnableStencilTest};
+                                    StateEnum::StencilWrite};
                 pipe_info.vertex_fields = {{"POSITION", VertexFieldEnum::Position},
                                            {"TEXCOORD", VertexFieldEnum::UV0},
                                            {"COLOR", VertexFieldEnum::Color},
                                            {"INDEX", VertexFieldEnum::McEntityId}};
-                pipe_info.vertex_shader.source = renderer.get_resource_manager()
-                                                     .load_shader_file("gui.vertex.hlsl", ShaderStage::Vertex);
+                pipe_info.vertex_shader.source = load_shader_file("gui.vertex.hlsl", vfs, ShaderStage::Vertex);
+
+                pipe_info.scissor_mode = ScissorTestMode::DynamicScissorRect;
+
                 // TODO: fill in the rest of the pipeline info
 
                 device->create_pipeline(pipeline_interface, pipe_info, *allocator)
@@ -439,6 +452,8 @@ namespace nova::bf {
             most_recent_mouse_button = std::make_optional<std::pair<nk_buttons, bool>>(to_nk_mouse_button(button), is_press);
         });
     }
+
+    void NuklearDevice::save_framebuffer_size_ratio() { framebuffer_size_ratio = renderer.get_window()->get_framebuffer_to_window_ratio(); }
 
     nk_buttons to_nk_mouse_button(const uint32_t button) {
         switch(button) {
