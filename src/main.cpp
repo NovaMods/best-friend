@@ -52,8 +52,9 @@ int main(int argc, const char** argv) {
     setup_logger();
 
     nova::renderer::NovaSettings settings;
-#ifndef NDEBUG
+#if NOVA_DEBUG
     settings.debug.enabled = true;
+    settings.debug.enable_validation_layers = true;
 #endif
 
     settings.window.title = "Best Friend Train Viewer";

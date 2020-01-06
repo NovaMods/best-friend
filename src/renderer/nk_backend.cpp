@@ -282,25 +282,32 @@ namespace nova::bf {
                 PipelineCreateInfo pipe_info = {};
                 pipe_info.name = UI_PIPELINE_NAME;
                 pipe_info.pass = UI_RENDER_PASS_NAME;
-                pipe_info.states = {StateEnum::DisableDepthTest,
-                                    StateEnum::DisableDepthWrite,
-                                    StateEnum::Blending,
-                                    StateEnum::StencilWrite};
+                pipe_info.states = {StateEnum::DisableDepthTest, StateEnum::DisableDepthWrite, StateEnum::Blending, StateEnum::DisableCulling};
                 pipe_info.vertex_fields = {{"POSITION", VertexFieldEnum::Position},
                                            {"TEXCOORD", VertexFieldEnum::UV0},
                                            {"COLOR", VertexFieldEnum::Color},
                                            {"INDEX", VertexFieldEnum::McEntityId}};
+                pipe_info.primitive_mode = PrimitiveTopologyEnum::Triangles;
+
                 pipe_info.vertex_shader.source = load_shader_file("gui.vertex.hlsl", vfs, ShaderStage::Vertex);
                 if(pipe_info.vertex_shader.source.empty()) {
                     return false;
                 }
 
+                pipe_info.fragment_shader = std::make_optional<ShaderSource>();
+                pipe_info.fragment_shader->source = load_shader_file("gui.pixel.hlsl", vfs, ShaderStage::Fragment);
+                if(pipe_info.fragment_shader->source.empty()) {
+                    return false;
+                }
+
                 pipe_info.scissor_mode = ScissorTestMode::DynamicScissorRect;
 
-                // TODO: fill in the rest of the pipeline info
+                pipe_info.source_color_blend_factor = BlendFactorEnum::SrcAlpha;
+                pipe_info.source_alpha_blend_factor = BlendFactorEnum::SrcAlpha;
+                pipe_info.destination_color_blend_factor = BlendFactorEnum::OneMinusSrcAlpha;
+                pipe_info.destination_alpha_blend_factor = BlendFactorEnum::OneMinusSrcAlpha;
 
                 auto pipeline_storage = renderer.get_pipeline_storage();
-
                 return pipeline_storage->create_pipeline(pipe_info);
             })
             .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline interface: " << err.to_string(); });

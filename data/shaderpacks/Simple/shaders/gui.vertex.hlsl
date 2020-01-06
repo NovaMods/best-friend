@@ -16,6 +16,7 @@ struct UiConstants {
     float4x4 view_matrix;
 };
 
+[[vk::binding(0)]]
 ConstantBuffer<UiConstants> constants   : register(b0, space0);
 
 VsOutput main(VsInput input) {

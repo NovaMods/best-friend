@@ -1,4 +1,7 @@
+[[vk::binding(1, 0)]]
 Texture2D ui_textures[] : register(t0);
+
+[[vk::binding(1, 1)]]
 SamplerState ui_sampler : register(s0);
 
 struct VsOutput {
