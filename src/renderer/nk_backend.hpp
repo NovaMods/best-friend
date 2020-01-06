@@ -43,7 +43,7 @@ namespace nova {
         struct NullNuklearImage : NuklearImage {
             nk_draw_null_texture nk_null_tex = {};
 
-            NullNuklearImage(renderer::TextureResourceAccessor image, struct nk_image nk_image = {}, nk_draw_null_texture null_tex = {});
+            NullNuklearImage(const renderer::TextureResourceAccessor& image, struct nk_image nk_image = {}, nk_draw_null_texture null_tex = {});
         };
 
         struct NuklearVertex {

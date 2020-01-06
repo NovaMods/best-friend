@@ -7,6 +7,7 @@
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL4_IMPLEMENTATION
 #include <nova_renderer/loading/shaderpack_loading.hpp>
+#include <utility>
 #include <nuklear.h>
 
 #include "nova_renderer/util/logger.hpp"
@@ -41,9 +42,9 @@ namespace nova::bf {
 
     nk_buttons to_nk_mouse_button(uint32_t button);
 
-    NuklearImage::NuklearImage(const TextureResourceAccessor image, const struct nk_image nk_image) : image(image), nk_image(nk_image) {}
+    NuklearImage::NuklearImage(TextureResourceAccessor image, const struct nk_image nk_image) : image(std::move(image)), nk_image(nk_image) {}
 
-    NullNuklearImage::NullNuklearImage(const TextureResourceAccessor image,
+    NullNuklearImage::NullNuklearImage(const TextureResourceAccessor& image,
                                        const struct nk_image nk_image,
                                        const nk_draw_null_texture null_tex)
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
@@ -173,7 +174,7 @@ namespace nova::bf {
         auto descriptor_set_itr = sets.begin();
 
         uint32_t num_sets_used = 0;
-        size_t offset = 0;
+        uint32_t offset = 0;
 
         for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
             cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
@@ -213,10 +214,10 @@ namespace nova::bf {
                 ++descriptor_set_itr;
             }
 
-            const auto scissor_rect_x = cmd->clip_rect.x * framebuffer_size_ratio.x;
-            const auto scissor_rect_y = cmd->clip_rect.y * framebuffer_size_ratio.y;
-            const auto scissor_rect_width = cmd->clip_rect.w * framebuffer_size_ratio.x;
-            const auto scissor_rect_height = cmd->clip_rect.h * framebuffer_size_ratio.y;
+            const auto scissor_rect_x = static_cast<uint32_t>(std::round(cmd->clip_rect.x * framebuffer_size_ratio.x));
+            const auto scissor_rect_y = static_cast<uint32_t>(std::round(cmd->clip_rect.y * framebuffer_size_ratio.y));
+            const auto scissor_rect_width = static_cast<uint32_t>(std::round(cmd->clip_rect.w * framebuffer_size_ratio.x));
+            const auto scissor_rect_height = static_cast<uint32_t>(std::round(cmd->clip_rect.h * framebuffer_size_ratio.y));
             cmds->set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
 
             cmds->draw_indexed_mesh(cmd->elem_count, offset);
@@ -293,14 +294,7 @@ namespace nova::bf {
 
                 // TODO: fill in the rest of the pipeline info
 
-                device->create_pipeline(pipeline_interface, pipe_info, *allocator)
-                    .map([&](rhi::Pipeline* pipe) {
-                        this->pipeline = pipe;
-                        return true;
-                    })
-                    .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline: " << err.to_string(); });
-
-                return true;
+                return renderer.get_pipeline_storage()->create_pipeline(pipe_info);
             })
             .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline interface: " << err.to_string(); });
     }
