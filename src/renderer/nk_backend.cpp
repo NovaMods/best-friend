@@ -6,8 +6,9 @@
 
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL4_IMPLEMENTATION
-#include <nova_renderer/loading/shaderpack_loading.hpp>
 #include <utility>
+
+#include <nova_renderer/loading/shaderpack_loading.hpp>
 #include <nuklear.h>
 
 #include "nova_renderer/util/logger.hpp"
@@ -42,7 +43,8 @@ namespace nova::bf {
 
     nk_buttons to_nk_mouse_button(uint32_t button);
 
-    NuklearImage::NuklearImage(TextureResourceAccessor image, const struct nk_image nk_image) : image(std::move(image)), nk_image(nk_image) {}
+    NuklearImage::NuklearImage(TextureResourceAccessor image, const struct nk_image nk_image)
+        : image(std::move(image)), nk_image(nk_image) {}
 
     NullNuklearImage::NullNuklearImage(const TextureResourceAccessor& image,
                                        const struct nk_image nk_image,
@@ -289,12 +291,17 @@ namespace nova::bf {
                                            {"COLOR", VertexFieldEnum::Color},
                                            {"INDEX", VertexFieldEnum::McEntityId}};
                 pipe_info.vertex_shader.source = load_shader_file("gui.vertex.hlsl", vfs, ShaderStage::Vertex);
+                if(pipe_info.vertex_shader.source.empty()) {
+                    return false;
+                }
 
                 pipe_info.scissor_mode = ScissorTestMode::DynamicScissorRect;
 
                 // TODO: fill in the rest of the pipeline info
 
-                return renderer.get_pipeline_storage()->create_pipeline(pipe_info);
+                auto pipeline_storage = renderer.get_pipeline_storage();
+
+                return pipeline_storage->create_pipeline(pipe_info);
             })
             .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline interface: " << err.to_string(); });
     }

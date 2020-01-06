@@ -66,6 +66,8 @@ int main(int argc, const char** argv) {
     settings.api = nova::renderer::GraphicsApi::Vulkan;
 #endif
 
+    nova::filesystem::VirtualFilesystem::get_instance()->add_resource_root(BEST_FRIEND_DATA_DIR);
+
     nova::renderer::NovaRenderer renderer(settings);
 
     renderer.set_num_meshes(32); // Best guess, should fix when we know more

@@ -11,5 +11,5 @@ namespace nova::bf {
 
     const std::string NULL_TEXTURE_NAME = "BestFriendNull";
 
-    const std::string SHADERS_PATH;
+    const std::string SHADERS_PATH = "shaderpacks/Simple/shaders";
 } // namespace nova::bf

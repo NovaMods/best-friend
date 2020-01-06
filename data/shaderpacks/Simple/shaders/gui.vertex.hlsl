@@ -33,4 +33,6 @@ VsOutput main(VsInput input) {
     output.color = float4(red, green, blue, alpha) / 255.0f;
 
     output.texture_index = input.texture_index;
+
+    return output;
 }
