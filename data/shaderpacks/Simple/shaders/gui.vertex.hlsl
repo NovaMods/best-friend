@@ -33,7 +33,7 @@ VsOutput main(VsInput input) {
     uint alpha = input.color & 0xFF;
     output.color = float4(red, green, blue, alpha) / 255.0f;
 
-    output.data = input.data;
+    output.texture_id = input.texture_id;
 
     return output;
 }

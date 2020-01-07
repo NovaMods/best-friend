@@ -76,12 +76,13 @@ int main(int argc, const char** argv) {
     std::unique_ptr<World> world = std::make_unique<World>();
     const std::shared_ptr<nova::bf::NuklearDevice> nuklear_device = std::make_shared<nova::bf::NuklearDevice>(renderer);
 
-    // TODO: Load the renderpack _after_ registering the UI render pass
     renderer.set_ui_renderpass(nuklear_device);
+
+    renderer.load_shaderpack("Simple");
 
     // Instantiate the basic entities
     // TODO: Make something more better
-    nova::ec::Entity* train_selection_entity = new nova::ec::Entity();
+    auto* train_selection_entity = new nova::ec::Entity();
     train_selection_entity->add_component<nova::bf::TrainSelectionPanel>(nuklear_device->get_context());
     world->add_entity(train_selection_entity);
 
