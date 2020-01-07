@@ -275,29 +275,29 @@ namespace nova::bf {
         color_rtv_info.clear = false;
 
         device->create_pipeline_interface(bindings, {color_rtv_info}, {}, *allocator)
-            .map([&](PipelineInterface* pipeline_interface) {
+            .flat_map([&](PipelineInterface* pipeline_interface) {
                 const auto vfs = filesystem::VirtualFilesystem::get_instance()->get_folder_accessor(SHADERS_PATH);
 
                 this->pipeline_interface = pipeline_interface;
                 PipelineCreateInfo pipe_info = {};
                 pipe_info.name = UI_PIPELINE_NAME;
                 pipe_info.pass = UI_RENDER_PASS_NAME;
-                pipe_info.states = {StateEnum::DisableDepthTest, StateEnum::DisableDepthWrite, StateEnum::Blending, StateEnum::DisableCulling};
-                pipe_info.vertex_fields = {{"POSITION", VertexFieldEnum::Position},
-                                           {"TEXCOORD", VertexFieldEnum::UV0},
-                                           {"COLOR", VertexFieldEnum::Color},
-                                           {"INDEX", VertexFieldEnum::McEntityId}};
+                pipe_info.states = {StateEnum::DisableDepthTest,
+                                    StateEnum::DisableDepthWrite,
+                                    StateEnum::Blending,
+                                    StateEnum::DisableCulling};
                 pipe_info.primitive_mode = PrimitiveTopologyEnum::Triangles;
 
-                pipe_info.vertex_shader.source = load_shader_file("gui.vertex.hlsl", vfs, ShaderStage::Vertex);
+                pipe_info.vertex_shader.source = load_shader_file(UI_PIPELINE_VERTEX_SHADER, vfs, ShaderStage::Vertex);
                 if(pipe_info.vertex_shader.source.empty()) {
-                    return false;
+                    return ntl::Result<bool>(MAKE_ERROR("Could not compile vertex shader {:s}", UI_PIPELINE_VERTEX_SHADER));
                 }
 
                 pipe_info.fragment_shader = std::make_optional<ShaderSource>();
-                pipe_info.fragment_shader->source = load_shader_file("gui.pixel.hlsl", vfs, ShaderStage::Fragment);
+                pipe_info.fragment_shader->source = load_shader_file(UI_PIPELINE_PIXEL_SHADER, vfs, ShaderStage::Fragment);
                 if(pipe_info.fragment_shader->source.empty()) {
-                    return false;
+                    return ntl::Result<bool>(MAKE_ERROR("Could not compile fragment shader {:s}", UI_PIPELINE_PIXEL_SHADER));
+                    ;
                 }
 
                 pipe_info.scissor_mode = ScissorTestMode::DynamicScissorRect;
@@ -308,9 +308,9 @@ namespace nova::bf {
                 pipe_info.destination_alpha_blend_factor = BlendFactorEnum::OneMinusSrcAlpha;
 
                 auto pipeline_storage = renderer.get_pipeline_storage();
-                return pipeline_storage->create_pipeline(pipe_info);
+                return ntl::Result<bool>(pipeline_storage->create_pipeline(pipe_info));
             })
-            .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline interface: " << err.to_string(); });
+            .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline: " << err.to_string(); });
     }
 
     void NuklearDevice::load_font() {

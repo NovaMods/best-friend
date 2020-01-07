@@ -2,14 +2,14 @@ struct VsInput {
     float2 position : POSITION;
     float2 uv : TEXCOORD;
     uint color : COLOR;
-    float4 data : INDEX;
+    uint texture_id : INDEX;
 };
 
 struct VsOutput {
     float4 position : SV_POSITION;
     float2 uv : TEXCOORD;
     float4 color : COLOR;
-    float4 data : INDEX;
+    uint texture_id : INDEX;
 };
 
 struct UiConstants {
