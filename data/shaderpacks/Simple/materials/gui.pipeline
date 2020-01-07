@@ -9,23 +9,5 @@
         "Blending"
     ],
     "vertexShader": "shaders/gui.pixel.hlsl",
-    "fragmentShader": "shaders/gui.vertex.hlsl",
-    "vertexFields": [
-        {
-            "name": "position",
-            "field": "Position"
-        },
-        {
-            "name": "uv",
-            "field": "UV0"
-        },
-        {
-            "name": "color",
-            "field": "Color"
-        },
-        {
-            "name": "texture_index",
-            "field": "ID"
-        }
-    ]
+    "fragmentShader": "shaders/gui.vertex.hlsl"
 }
