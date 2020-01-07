@@ -1,0 +1,6 @@
+{
+    "passes": [],
+    "builtin_passes": [
+        "NovaUI"
+    ]
+}
