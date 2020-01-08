@@ -1,5 +1,19 @@
 {
-    "passes": [],
+    "passes": [
+        {
+            "name": "Forward",
+            "textureOutputs": [
+                {
+                    "name": "NovaSceneOutput",
+                    "clear": true
+                }
+            ],
+            "depthTexture": {
+                "name": "DepthBuffer",
+                "clear": true
+            }
+        }
+    ],
     "builtin_passes": [
         "NovaUI"
     ]

@@ -17,7 +17,7 @@ struct UiConstants {
 };
 
 [[vk::binding(0, 0)]]
-ConstantBuffer<UiConstants> constants   : register(b0, space0);
+ConstantBuffer<UiConstants> constants : register(b0, space0);
 
 VsOutput main(VsInput input) {
     VsOutput output;

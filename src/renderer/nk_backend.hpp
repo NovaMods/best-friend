@@ -79,6 +79,8 @@ namespace nova {
                                                                    std::size_t height,
                                                                    const void* image_data);
 
+            void clear_context() const;
+
         private:
             std::shared_ptr<nk_context> ctx;
 
@@ -128,8 +130,6 @@ namespace nova {
             void init_nuklear();
 
             void create_textures();
-
-            void create_pipeline();
 
             void load_font();
 

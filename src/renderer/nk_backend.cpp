@@ -71,8 +71,6 @@ namespace nova::bf {
 
         create_textures();
 
-        create_pipeline();
-
         load_font();
 
         register_input_callbacks();
@@ -139,6 +137,10 @@ namespace nova::bf {
         }
     }
 
+    void NuklearDevice::clear_context() const {
+        nk_clear(ctx.get());
+    }
+
     void NuklearDevice::render_ui(CommandList* cmds, FrameContext& frame_ctx) {
         static const nk_draw_vertex_layout_element vertex_layout[] =
             {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
@@ -161,12 +163,15 @@ namespace nova::bf {
         // vertex_buffer and index_buffer let Nuklear write vertex information directly
         nk_convert(ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
 
-        // For each command, add its texture to a texture array and add its mesh data to a mesh
-        // When the texture array is full, allocate a new one from the RHI and begin using that for draws
-        // When the mesh is full, allocate a new one from the RHI
-        // We need to keep a lit of previously-used descriptor
-        // The descriptors need to be CPU descriptors that we can update whenever we feel like. The RHI should create GPU descriptors on
-        // draw HOWEVER, we should keep a buffer of meshes that we already used so we don't constantly reallocate meshes
+        const auto pipeline = frame_ctx.nova->get_pipeline_storage()->get_pipeline(UI_PIPELINE_NAME);
+        if(!pipeline) {
+            NOVA_LOG(ERROR) << "Could not get pipeline " << UI_PIPELINE_NAME << " from Nova's pipeline storage";
+            return;
+        }
+
+        cmds->bind_pipeline(pipeline->pipeline);
+
+
 
         // Textures to bind to the current descriptor set
         std::pmr::vector<Image*> current_descriptor_textures(*frame_ctx.allocator);
@@ -231,7 +236,7 @@ namespace nova::bf {
             NOVA_LOG(INFO) << "Used " << num_sets_used << " descriptor sets. Maybe you should only use one";
         }
 
-        nk_clear(ctx.get());
+        clear_context();
     }
 
     void NuklearDevice::init_nuklear() {
@@ -253,64 +258,6 @@ namespace nova::bf {
         } else {
             NOVA_LOG(ERROR) << "Could not create null texture";
         }
-    }
-
-    void NuklearDevice::create_pipeline() {
-        auto* device = renderer.get_engine();
-
-        ResourceBindingDescription ui_tex_desc = {};
-        ui_tex_desc.set = 0;
-        ui_tex_desc.binding = 0;
-        ui_tex_desc.count = 65536; // TODO: device->info.max_unbounded_array_size;
-        ui_tex_desc.is_unbounded = true;
-        ui_tex_desc.type = DescriptorType::CombinedImageSampler;
-        ui_tex_desc.stages = ShaderStage::Fragment;
-
-        std::unordered_map<std::string, ResourceBindingDescription> bindings;
-        bindings.emplace("ui_textures", ui_tex_desc);
-
-        TextureAttachmentInfo color_rtv_info = {};
-        color_rtv_info.name = BACKBUFFER_NAME;
-        color_rtv_info.pixel_format = PixelFormatEnum::RGBA8;
-        color_rtv_info.clear = false;
-
-        device->create_pipeline_interface(bindings, {color_rtv_info}, {}, *allocator)
-            .flat_map([&](PipelineInterface* pipeline_interface) {
-                const auto vfs = filesystem::VirtualFilesystem::get_instance()->get_folder_accessor(SHADERS_PATH);
-
-                this->pipeline_interface = pipeline_interface;
-                PipelineCreateInfo pipe_info = {};
-                pipe_info.name = UI_PIPELINE_NAME;
-                pipe_info.pass = UI_RENDER_PASS_NAME;
-                pipe_info.states = {StateEnum::DisableDepthTest,
-                                    StateEnum::DisableDepthWrite,
-                                    StateEnum::Blending,
-                                    StateEnum::DisableCulling};
-                pipe_info.primitive_mode = PrimitiveTopologyEnum::Triangles;
-
-                pipe_info.vertex_shader.source = load_shader_file(UI_PIPELINE_VERTEX_SHADER, vfs, ShaderStage::Vertex);
-                if(pipe_info.vertex_shader.source.empty()) {
-                    return ntl::Result<bool>(MAKE_ERROR("Could not compile vertex shader {:s}", UI_PIPELINE_VERTEX_SHADER));
-                }
-
-                pipe_info.fragment_shader = std::make_optional<ShaderSource>();
-                pipe_info.fragment_shader->source = load_shader_file(UI_PIPELINE_PIXEL_SHADER, vfs, ShaderStage::Fragment);
-                if(pipe_info.fragment_shader->source.empty()) {
-                    return ntl::Result<bool>(MAKE_ERROR("Could not compile fragment shader {:s}", UI_PIPELINE_PIXEL_SHADER));
-                    ;
-                }
-
-                pipe_info.scissor_mode = ScissorTestMode::DynamicScissorRect;
-
-                pipe_info.source_color_blend_factor = BlendFactorEnum::SrcAlpha;
-                pipe_info.source_alpha_blend_factor = BlendFactorEnum::SrcAlpha;
-                pipe_info.destination_color_blend_factor = BlendFactorEnum::OneMinusSrcAlpha;
-                pipe_info.destination_alpha_blend_factor = BlendFactorEnum::OneMinusSrcAlpha;
-
-                auto pipeline_storage = renderer.get_pipeline_storage();
-                return ntl::Result<bool>(pipeline_storage->create_pipeline(pipe_info));
-            })
-            .on_error([](const ntl::NovaError& err) { NOVA_LOG(ERROR) << "Could not create UI pipeline: " << err.to_string(); });
     }
 
     void NuklearDevice::load_font() {
