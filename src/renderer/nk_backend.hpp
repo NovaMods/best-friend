@@ -81,6 +81,8 @@ namespace nova {
 
             void clear_context() const;
 
+            const renderer::shaderpack::RenderPassCreateInfo& get_create_info() const;
+
         private:
             std::shared_ptr<nk_context> ctx;
 

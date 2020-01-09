@@ -139,8 +139,10 @@ namespace nova::bf {
         }
     }
 
-    void NuklearDevice::clear_context() const {
-        nk_clear(ctx.get());
+    void NuklearDevice::clear_context() const { nk_clear(ctx.get()); }
+
+    const RenderPassCreateInfo& NuklearDevice::get_create_info() const {
+        RenderPassCreateInfo create_info = {};
     }
 
     void NuklearDevice::render_ui(CommandList* cmds, FrameContext& frame_ctx) {
@@ -173,8 +175,6 @@ namespace nova::bf {
 
         cmds->bind_pipeline(pipeline->pipeline);
 
-
-
         // Textures to bind to the current descriptor set
         std::pmr::vector<Image*> current_descriptor_textures(*frame_ctx.allocator);
         current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
@@ -206,7 +206,7 @@ namespace nova::bf {
 
                 std::transform(current_descriptor_textures.begin(),
                                current_descriptor_textures.end(),
-                               std::back_insert_iterator < std::vector<DescriptorResourceInfo>>(write.resources),
+                               std::back_insert_iterator<std::vector<DescriptorResourceInfo>>(write.resources),
                                [&](Image* image) {
                                    DescriptorResourceInfo info = {};
                                    info.image_info.image = image;

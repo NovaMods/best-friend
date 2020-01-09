@@ -74,9 +74,13 @@ int main(int argc, const char** argv) {
     renderer.set_num_meshes(32); // Best guess, should fix when we know more
 
     std::unique_ptr<World> world = std::make_unique<World>();
-    const std::shared_ptr<nova::bf::NuklearDevice> nuklear_device = std::make_shared<nova::bf::NuklearDevice>(renderer);
+    const nova::bf::NuklearDevice* nuklear_device = [&]() {
+        const std::unique_ptr<nova::bf::NuklearDevice> nuklear_device = std::make_unique<nova::bf::NuklearDevice>(renderer);
+        const auto& create_info = nuklear_device->get_create_info();
 
-    renderer.set_ui_renderpass(nuklear_device);
+        auto* ptr = renderer.set_ui_renderpass(std::move(nuklear_device), create_info);
+        return static_cast<nova::bf::NuklearDevice*>(ptr);
+    }();
 
     renderer.load_shaderpack("Simple");
 
