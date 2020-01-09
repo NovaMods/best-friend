@@ -56,10 +56,12 @@ namespace nova::bf {
           renderer(renderer),
           mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
+        name = UI_RENDER_PASS_NAME;
+
         allocator = std::unique_ptr<mem::AllocatorHandle<>>(renderer.get_global_allocator()->create_suballocator());
 
         // TODO: Some way to validate that this pass exists in the loaded shaderpack
-        const FullMaterialPassName& ui_full_material_pass_name = {"BestFriendGUI", "BestFriendGUI"};
+        const FullMaterialPassName& ui_full_material_pass_name = {UI_MATERIAL_NAME, UI_MATERIAL_PASS_NAME};
         StaticMeshRenderableData ui_renderable_data = {};
         ui_renderable_data.mesh = mesh.get_key();
         ui_renderable_id = renderer.add_renderable_for_material(ui_full_material_pass_name, ui_renderable_data);
@@ -204,7 +206,7 @@ namespace nova::bf {
 
                 std::transform(current_descriptor_textures.begin(),
                                current_descriptor_textures.end(),
-                               std::back_insert_iterator(write.resources),
+                               std::back_insert_iterator < std::vector<DescriptorResourceInfo>>(write.resources),
                                [&](Image* image) {
                                    DescriptorResourceInfo info = {};
                                    info.image_info.image = image;

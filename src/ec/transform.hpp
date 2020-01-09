@@ -7,7 +7,7 @@ namespace nova::ec {
 	class Transform : public Component
 	{
 	public:
-        explicit Transform(Entity* owner);
+        explicit Transform(Entity* owner_in);
 		virtual ~Transform() = default;
 
 		void set_parent(Transform* parent);

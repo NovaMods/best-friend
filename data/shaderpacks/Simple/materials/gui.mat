@@ -1,0 +1,12 @@
+{
+    "name": "BestFriendGUI",
+    "passes":[
+        {
+            "name": "BestFriendGUI",
+            "pipeline": "BestFriendUI",
+            "bindings": {
+                "constants": "BestFriendUIUBO"
+            }
+        }
+    ]
+}

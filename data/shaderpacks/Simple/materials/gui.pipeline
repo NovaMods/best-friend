@@ -1,0 +1,22 @@
+{
+    "name": "BestFriendUI",
+    "pass": "NovaUI",
+    "states": [
+        "DisableDepthTest",
+        "DisableDepthWrite",
+        "Blending",
+        "DisableCulling"
+    ],
+
+    "primitiveMode": "Triangles",
+
+    "vertexShader": "shaders/gui.vertex.hlsl",
+    "fragmentShader": "shaders/gui.pixel.hlsl",
+
+    "scissorMode": "DynamicScissorRect",
+
+    "sourceBlendFactor": "SrcAlpha",
+    "destBlendFactor":"OneMinusSrcAlpha",
+    "alphaSrc": "SrcAlpha",
+    "alphaDest": "OneMinusSrcAlpha"
+}

@@ -23,7 +23,7 @@ namespace nova::ec {
 		 * type of its first parameter. You may have as many other parameters as you wish. The construct MUST call this
 		 *  constructor, or nothing will work properly
 		 */
-		Component(Entity* owner);
+		Component(Entity* owner_in);
 
 		Component(const Component& other) = delete;
 		Component& operator=(const Component& other) = delete;

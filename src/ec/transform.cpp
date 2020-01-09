@@ -3,7 +3,7 @@
 #include <algorithm>
 
 namespace nova::ec {
-    Transform::Transform(Entity* owner) : Component(owner) {
+    Transform::Transform(Entity* owner_in) : Component(owner_in) {
     }
 
     void Transform::set_parent(Transform* parent) {

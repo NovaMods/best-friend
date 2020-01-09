@@ -7,9 +7,15 @@
  */
 class Panel : public nova::ec::Component {
 public:
-    explicit Panel(nova::ec::Entity* owner);
+    explicit Panel(nova::ec::Entity* owner_in);
 
-    virtual ~Panel() = default;
+    Panel(const Panel& other) = default;
+    Panel& operator=(const Panel& other) = default;
+
+    Panel(Panel&& old) noexcept = default;
+    Panel& operator=(Panel&& old) noexcept = default;
+
+    ~Panel() override = default;
 
     /*!
      * \brief Draws this panel using the `draw` template method. May be overriden to perform additional work, but you'll need to either call
