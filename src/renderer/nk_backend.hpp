@@ -81,7 +81,7 @@ namespace nova {
 
             void clear_context() const;
 
-            const renderer::shaderpack::RenderPassCreateInfo& get_create_info() const;
+            static renderer::shaderpack::RenderPassCreateInfo get_create_info();
 
         private:
             std::shared_ptr<nk_context> ctx;
@@ -145,7 +145,7 @@ namespace nova {
             /*!
              * \brief Renders all the UI elements that were drawn to the context
              */
-            void render_ui(renderer::rhi::CommandList* cmds, renderer::FrameContext& frame_ctx) override;
+            void render_ui(renderer::rhi::CommandList& cmds, renderer::FrameContext& frame_ctx) override;
         };
     } // namespace bf
 } // namespace nova

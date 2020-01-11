@@ -52,8 +52,7 @@ namespace nova::bf {
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
 
     NuklearDevice::NuklearDevice(NovaRenderer& renderer)
-        : UiRenderpass(renderer.get_engine(), renderer.get_engine()->get_swapchain()->get_size()),
-          renderer(renderer),
+        : renderer(renderer),
           mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
         name = UI_RENDER_PASS_NAME;
@@ -123,8 +122,8 @@ namespace nova::bf {
         const auto idx = next_image_idx;
         next_image_idx++;
 
-        auto resource_manager = renderer.get_resource_manager();
-        auto image = resource_manager->create_texture(name, width, height, PixelFormat::Rgba8, image_data, *allocator);
+        auto& resource_manager = renderer.get_resource_manager();
+        auto image = resource_manager.create_texture(name, width, height, PixelFormat::Rgba8, image_data, *allocator);
         if(image) {
             textures.emplace(next_image_idx, *image);
 
@@ -141,11 +140,13 @@ namespace nova::bf {
 
     void NuklearDevice::clear_context() const { nk_clear(ctx.get()); }
 
-    const RenderPassCreateInfo& NuklearDevice::get_create_info() const {
-        RenderPassCreateInfo create_info = {};
+    RenderPassCreateInfo NuklearDevice::get_create_info() {
+        static auto create_info = UiRenderpass::get_create_info();
+
+        return create_info;
     }
 
-    void NuklearDevice::render_ui(CommandList* cmds, FrameContext& frame_ctx) {
+    void NuklearDevice::render_ui(CommandList& cmds, FrameContext& frame_ctx) {
         static const nk_draw_vertex_layout_element vertex_layout[] =
             {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
              {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
@@ -167,13 +168,13 @@ namespace nova::bf {
         // vertex_buffer and index_buffer let Nuklear write vertex information directly
         nk_convert(ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
 
-        const auto pipeline = frame_ctx.nova->get_pipeline_storage()->get_pipeline(UI_PIPELINE_NAME);
+        const auto pipeline = frame_ctx.nova->get_pipeline_storage().get_pipeline(UI_PIPELINE_NAME);
         if(!pipeline) {
             NOVA_LOG(ERROR) << "Could not get pipeline " << UI_PIPELINE_NAME << " from Nova's pipeline storage";
             return;
         }
 
-        cmds->bind_pipeline(pipeline->pipeline);
+        cmds.bind_pipeline(pipeline->pipeline);
 
         // Textures to bind to the current descriptor set
         std::pmr::vector<Image*> current_descriptor_textures(*frame_ctx.allocator);
@@ -217,7 +218,7 @@ namespace nova::bf {
                                    return info;
                                });
 
-                renderer.get_engine()->update_descriptor_sets(writes);
+                renderer.get_engine().update_descriptor_sets(writes);
 
                 num_sets_used++;
                 ++descriptor_set_itr;
@@ -227,9 +228,9 @@ namespace nova::bf {
             const auto scissor_rect_y = static_cast<uint32_t>(std::round(cmd->clip_rect.y * framebuffer_size_ratio.y));
             const auto scissor_rect_width = static_cast<uint32_t>(std::round(cmd->clip_rect.w * framebuffer_size_ratio.x));
             const auto scissor_rect_height = static_cast<uint32_t>(std::round(cmd->clip_rect.h * framebuffer_size_ratio.y));
-            cmds->set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
+            cmds.set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
 
-            cmds->draw_indexed_mesh(cmd->elem_count, offset);
+            cmds.draw_indexed_mesh(cmd->elem_count, offset);
 
             offset += cmd->elem_count;
         }
@@ -243,7 +244,7 @@ namespace nova::bf {
 
     void NuklearDevice::init_nuklear() {
         ctx = std::make_shared<nk_context>();
-        nk_init_default(&(*ctx), nullptr);
+        nk_init_default(ctx.get(), nullptr);
 
         nk_buffer_init_default(&nk_cmds);
 
@@ -293,8 +294,8 @@ namespace nova::bf {
     }
 
     void NuklearDevice::register_input_callbacks() {
-        const auto window = renderer.get_window();
-        window->register_key_callback(
+        auto& window = renderer.get_window();
+        window.register_key_callback(
             [&](const auto& key, const bool is_press, const bool is_control_down, const bool /* is_shift_down */) {
                 std::lock_guard l(key_buffer_mutex);
                 // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
@@ -401,16 +402,16 @@ namespace nova::bf {
                 }
             });
 
-        window->register_mouse_callback([&](const double x_position, const double y_position) {
+        window.register_mouse_callback([&](const double x_position, const double y_position) {
             most_recent_mouse_position = {x_position, y_position};
         });
 
-        window->register_mouse_button_callback([&](const uint32_t button, const bool is_press) {
+        window.register_mouse_button_callback([&](const uint32_t button, const bool is_press) {
             most_recent_mouse_button = std::make_optional<std::pair<nk_buttons, bool>>(to_nk_mouse_button(button), is_press);
         });
     }
 
-    void NuklearDevice::save_framebuffer_size_ratio() { framebuffer_size_ratio = renderer.get_window()->get_framebuffer_to_window_ratio(); }
+    void NuklearDevice::save_framebuffer_size_ratio() { framebuffer_size_ratio = renderer.get_window().get_framebuffer_to_window_ratio(); }
 
     nk_buttons to_nk_mouse_button(const uint32_t button) {
         switch(button) {

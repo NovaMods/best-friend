@@ -35,7 +35,7 @@ namespace nova::ec {
 
         virtual ~Entity() = default;
 
-        uint64_t get_id() const;
+        [[nodiscard]] uint64_t get_id() const;
 
         /*!
          * \brief Ticks this entity and also all its components
@@ -60,7 +60,7 @@ namespace nova::ec {
                 return nullptr;
             }
 
-            ComponentType* new_component = new ComponentType(this, args...);
+            auto* new_component = new ComponentType(this, args...);
             components.push_back(new_component);
 
             return new_component;
