@@ -67,12 +67,6 @@ int main(int argc, const char** argv) {
     settings.window.width = 640;
     settings.window.height = 480;
 
-#if WIN32
-    settings.api = GraphicsApi::D3D12;
-#else
-    settings.api = GraphicsApi::Vulkan;
-#endif
-
     VirtualFilesystem::get_instance()->add_resource_root(BEST_FRIEND_DATA_DIR);
 
     NovaRenderer renderer(settings);

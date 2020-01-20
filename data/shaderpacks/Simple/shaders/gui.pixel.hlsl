@@ -1,4 +1,4 @@
-[[vk::binding(1, 0)]]
+[[vk::binding(0, 1)]]
 Texture2D ui_textures[] : register(t0);
 
 [[vk::binding(1, 1)]]

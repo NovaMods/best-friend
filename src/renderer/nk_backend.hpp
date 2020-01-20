@@ -3,13 +3,13 @@
 #include <optional>
 #include <unordered_map>
 
-#include <nova_renderer/frontend/ui_renderer.hpp>
+#include <nova_renderer/ui_renderer.hpp>
 #include <nova_renderer/memory/allocators.hpp>
 #include <nova_renderer/renderables.hpp>
 #include <nova_renderer/util/container_accessor.hpp>
 #include <nuklear.h>
 
-#include "nova_renderer/frontend/resource_loader.hpp"
+#include "nova_renderer/resource_loader.hpp"
 
 //! \brief Nuklear backend that renders Nuklear geometry with the Nova renderer
 //!

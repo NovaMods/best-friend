@@ -1,6 +1,6 @@
 #include "nk_backend.hpp"
 
-#include <nova_renderer/frontend/procedural_mesh.hpp>
+#include <nova_renderer/procedural_mesh.hpp>
 #include <nova_renderer/nova_renderer.hpp>
 #include <nova_renderer/rhi/swapchain.hpp>
 
@@ -77,6 +77,8 @@ namespace nova::bf {
         register_input_callbacks();
 
         save_framebuffer_size_ratio();
+
+        clear_context();
     }
 
     NuklearDevice::~NuklearDevice() {
@@ -207,7 +209,7 @@ namespace nova::bf {
 
                 std::transform(current_descriptor_textures.begin(),
                                current_descriptor_textures.end(),
-                               std::back_insert_iterator<std::vector<DescriptorResourceInfo>>(write.resources),
+                               std::back_insert_iterator<std::pmr::vector<DescriptorResourceInfo>>(write.resources),
                                [&](Image* image) {
                                    DescriptorResourceInfo info = {};
                                    info.image_info.image = image;
