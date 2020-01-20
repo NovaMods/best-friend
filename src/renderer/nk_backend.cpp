@@ -127,9 +127,9 @@ namespace nova::bf {
         auto& resource_manager = renderer.get_resource_manager();
         auto image = resource_manager.create_texture(name, width, height, PixelFormat::Rgba8, image_data, *allocator);
         if(image) {
-            textures.emplace(next_image_idx, *image);
+            textures.emplace(idx, *image);
 
-            const struct nk_image nk_image = nk_image_id(static_cast<int>(next_image_idx));
+            const struct nk_image nk_image = nk_image_id(static_cast<int>(idx));
 
             return std::make_optional<NuklearImage>(*image, nk_image);
 
@@ -177,6 +177,10 @@ namespace nova::bf {
         }
 
         cmds.bind_pipeline(pipeline->pipeline);
+
+        const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
+        cmds.bind_vertex_buffers({vertex_buffer, 3});
+        cmds.bind_index_buffer(index_buffer);
 
         // Textures to bind to the current descriptor set
         std::pmr::vector<Image*> current_descriptor_textures(*frame_ctx.allocator);
@@ -226,10 +230,10 @@ namespace nova::bf {
                 ++descriptor_set_itr;
             }
 
-            const auto scissor_rect_x = static_cast<uint32_t>(std::round(cmd->clip_rect.x * framebuffer_size_ratio.x));
-            const auto scissor_rect_y = static_cast<uint32_t>(std::round(cmd->clip_rect.y * framebuffer_size_ratio.y));
-            const auto scissor_rect_width = static_cast<uint32_t>(std::round(cmd->clip_rect.w * framebuffer_size_ratio.x));
-            const auto scissor_rect_height = static_cast<uint32_t>(std::round(cmd->clip_rect.h * framebuffer_size_ratio.y));
+            const auto scissor_rect_x       = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
+            const auto scissor_rect_y       = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
+            const auto scissor_rect_width   = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
+            const auto scissor_rect_height  = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.h * framebuffer_size_ratio.y)));
             cmds.set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
 
             cmds.draw_indexed_mesh(cmd->elem_count, offset);

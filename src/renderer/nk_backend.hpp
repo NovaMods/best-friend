@@ -118,7 +118,7 @@ namespace nova {
              */
             std::vector<renderer::rhi::DescriptorSet*> sets;
             std::unordered_map<int, renderer::TextureResourceAccessor> textures;
-            uint32_t next_image_idx = static_cast<uint32_t>(ImageId::Count);
+            uint32_t next_image_idx = 0;//static_cast<uint32_t>(ImageId::Count);
 
             std::unique_ptr<nk_font_atlas> nk_atlas;
             std::unique_ptr<NullNuklearImage> null_texture;
