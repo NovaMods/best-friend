@@ -1,7 +1,7 @@
 #include "nk_backend.hpp"
 
-#include <nova_renderer/procedural_mesh.hpp>
 #include <nova_renderer/nova_renderer.hpp>
+#include <nova_renderer/procedural_mesh.hpp>
 #include <nova_renderer/rhi/swapchain.hpp>
 
 #define NK_IMPLEMENTATION
@@ -51,19 +51,12 @@ namespace nova::bf {
                                        const nk_draw_null_texture null_tex)
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
 
-    NuklearDevice::NuklearDevice(NovaRenderer& renderer)
-        : renderer(renderer),
-          mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
+    NuklearDevice::NuklearDevice(NovaRenderer& renderer) 
+        : renderer(renderer), mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
         name = UI_RENDER_PASS_NAME;
 
         allocator = std::unique_ptr<mem::AllocatorHandle<>>(renderer.get_global_allocator()->create_suballocator());
-
-        // TODO: Some way to validate that this pass exists in the loaded shaderpack
-        const FullMaterialPassName& ui_full_material_pass_name = {UI_MATERIAL_NAME, UI_MATERIAL_PASS_NAME};
-        StaticMeshRenderableData ui_renderable_data = {};
-        ui_renderable_data.mesh = mesh.get_key();
-        ui_renderable_id = renderer.add_renderable_for_material(ui_full_material_pass_name, ui_renderable_data);
 
         vertices.reserve(MAX_VERTEX_BUFFER_SIZE / sizeof(NuklearVertex));
         indices.reserve(MAX_INDEX_BUFFER_SIZE / sizeof(uint32_t));
@@ -176,10 +169,14 @@ namespace nova::bf {
             return;
         }
 
+        if(texture_array_descriptors.empty()) {
+            create_descriptor_sets(*pipeline);
+        }
+
         cmds.bind_pipeline(pipeline->pipeline);
 
         const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
-        cmds.bind_vertex_buffers({vertex_buffer, 3});
+        cmds.bind_vertex_buffers({4, vertex_buffer});
         cmds.bind_index_buffer(index_buffer);
 
         // Textures to bind to the current descriptor set
@@ -187,7 +184,7 @@ namespace nova::bf {
         current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
 
         // Iterator to the descriptor set to write the current textures to
-        auto descriptor_set_itr = sets.begin();
+        auto descriptor_set_itr = texture_array_descriptors.begin();
 
         uint32_t num_sets_used = 0;
         uint32_t offset = 0;
@@ -230,10 +227,10 @@ namespace nova::bf {
                 ++descriptor_set_itr;
             }
 
-            const auto scissor_rect_x       = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
-            const auto scissor_rect_y       = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
-            const auto scissor_rect_width   = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
-            const auto scissor_rect_height  = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.h * framebuffer_size_ratio.y)));
+            const auto scissor_rect_x = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
+            const auto scissor_rect_y = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
+            const auto scissor_rect_width = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
+            const auto scissor_rect_height = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.h * framebuffer_size_ratio.y)));
             cmds.set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
 
             cmds.draw_indexed_mesh(cmd->elem_count, offset);
@@ -301,112 +298,111 @@ namespace nova::bf {
 
     void NuklearDevice::register_input_callbacks() {
         auto& window = renderer.get_window();
-        window.register_key_callback(
-            [&](const auto& key, const bool is_press, const bool is_control_down, const bool /* is_shift_down */) {
-                std::lock_guard l(key_buffer_mutex);
+        window.register_key_callback([&](const auto& key, const bool is_press, const bool is_control_down, const bool /* is_shift_down */) {
+            std::lock_guard l(key_buffer_mutex);
+            // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+            switch(key) {
+                case GLFW_KEY_DELETE:
+                    keys.emplace_back(NK_KEY_DEL, is_press);
+                    break;
+
+                case GLFW_KEY_ENTER:
+                    keys.emplace_back(NK_KEY_ENTER, is_press);
+                    break;
+
+                case GLFW_KEY_TAB:
+                    keys.emplace_back(NK_KEY_TAB, is_press);
+                    break;
+
+                case GLFW_KEY_BACKSPACE:
+                    keys.emplace_back(NK_KEY_BACKSPACE, is_press);
+                    break;
+
+                case GLFW_KEY_UP:
+                    keys.emplace_back(NK_KEY_UP, is_press);
+                    break;
+
+                case GLFW_KEY_DOWN:
+                    keys.emplace_back(NK_KEY_DOWN, is_press);
+                    break;
+
+                case GLFW_KEY_HOME:
+                    keys.emplace_back(NK_KEY_TEXT_START, is_press);
+                    keys.emplace_back(NK_KEY_SCROLL_START, is_press);
+                    break;
+
+                case GLFW_KEY_END:
+                    keys.emplace_back(NK_KEY_TEXT_END, is_press);
+                    keys.emplace_back(NK_KEY_SCROLL_END, is_press);
+                    break;
+
+                case GLFW_KEY_PAGE_DOWN:
+                    keys.emplace_back(NK_KEY_SCROLL_DOWN, is_press);
+                    break;
+
+                case GLFW_KEY_PAGE_UP:
+                    keys.emplace_back(NK_KEY_SCROLL_UP, is_press);
+                    break;
+
+                case GLFW_KEY_LEFT_SHIFT:
+                    [[fallthrough]];
+                case GLFW_KEY_RIGHT_SHIFT:
+                    keys.emplace_back(NK_KEY_SHIFT, is_press);
+                    break;
+            }
+
+            if(is_control_down) {
                 // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
                 switch(key) {
-                    case GLFW_KEY_DELETE:
-                        keys.emplace_back(NK_KEY_DEL, is_press);
+                    case GLFW_KEY_C:
+                        keys.emplace_back(NK_KEY_COPY, is_press);
                         break;
 
-                    case GLFW_KEY_ENTER:
-                        keys.emplace_back(NK_KEY_ENTER, is_press);
+                    case GLFW_KEY_V:
+                        keys.emplace_back(NK_KEY_PASTE, is_press);
                         break;
 
-                    case GLFW_KEY_TAB:
-                        keys.emplace_back(NK_KEY_TAB, is_press);
+                    case GLFW_KEY_X:
+                        keys.emplace_back(NK_KEY_CUT, is_press);
                         break;
 
-                    case GLFW_KEY_BACKSPACE:
-                        keys.emplace_back(NK_KEY_BACKSPACE, is_press);
+                    case GLFW_KEY_Z:
+                        keys.emplace_back(NK_KEY_TEXT_UNDO, is_press);
                         break;
 
-                    case GLFW_KEY_UP:
-                        keys.emplace_back(NK_KEY_UP, is_press);
+                    case GLFW_KEY_R:
+                        keys.emplace_back(NK_KEY_TEXT_REDO, is_press);
                         break;
 
-                    case GLFW_KEY_DOWN:
-                        keys.emplace_back(NK_KEY_DOWN, is_press);
+                    case GLFW_KEY_LEFT:
+                        keys.emplace_back(NK_KEY_TEXT_WORD_LEFT, is_press);
                         break;
 
-                    case GLFW_KEY_HOME:
-                        keys.emplace_back(NK_KEY_TEXT_START, is_press);
-                        keys.emplace_back(NK_KEY_SCROLL_START, is_press);
+                    case GLFW_KEY_RIGHT:
+                        keys.emplace_back(NK_KEY_TEXT_WORD_RIGHT, is_press);
                         break;
 
-                    case GLFW_KEY_END:
-                        keys.emplace_back(NK_KEY_TEXT_END, is_press);
-                        keys.emplace_back(NK_KEY_SCROLL_END, is_press);
+                    case GLFW_KEY_B:
+                        keys.emplace_back(NK_KEY_TEXT_LINE_START, is_press);
                         break;
 
-                    case GLFW_KEY_PAGE_DOWN:
-                        keys.emplace_back(NK_KEY_SCROLL_DOWN, is_press);
-                        break;
-
-                    case GLFW_KEY_PAGE_UP:
-                        keys.emplace_back(NK_KEY_SCROLL_UP, is_press);
-                        break;
-
-                    case GLFW_KEY_LEFT_SHIFT:
-                        [[fallthrough]];
-                    case GLFW_KEY_RIGHT_SHIFT:
-                        keys.emplace_back(NK_KEY_SHIFT, is_press);
+                    case GLFW_KEY_E:
+                        keys.emplace_back(NK_KEY_TEXT_LINE_END, is_press);
                         break;
                 }
+            } else {
+                // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
+                switch(key) {
+                    case GLFW_KEY_LEFT:
+                        keys.emplace_back(NK_KEY_LEFT, is_press);
+                        break;
 
-                if(is_control_down) {
-                    // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
-                    switch(key) {
-                        case GLFW_KEY_C:
-                            keys.emplace_back(NK_KEY_COPY, is_press);
-                            break;
-
-                        case GLFW_KEY_V:
-                            keys.emplace_back(NK_KEY_PASTE, is_press);
-                            break;
-
-                        case GLFW_KEY_X:
-                            keys.emplace_back(NK_KEY_CUT, is_press);
-                            break;
-
-                        case GLFW_KEY_Z:
-                            keys.emplace_back(NK_KEY_TEXT_UNDO, is_press);
-                            break;
-
-                        case GLFW_KEY_R:
-                            keys.emplace_back(NK_KEY_TEXT_REDO, is_press);
-                            break;
-
-                        case GLFW_KEY_LEFT:
-                            keys.emplace_back(NK_KEY_TEXT_WORD_LEFT, is_press);
-                            break;
-
-                        case GLFW_KEY_RIGHT:
-                            keys.emplace_back(NK_KEY_TEXT_WORD_RIGHT, is_press);
-                            break;
-
-                        case GLFW_KEY_B:
-                            keys.emplace_back(NK_KEY_TEXT_LINE_START, is_press);
-                            break;
-
-                        case GLFW_KEY_E:
-                            keys.emplace_back(NK_KEY_TEXT_LINE_END, is_press);
-                            break;
-                    }
-                } else {
-                    // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
-                    switch(key) {
-                        case GLFW_KEY_LEFT:
-                            keys.emplace_back(NK_KEY_LEFT, is_press);
-                            break;
-
-                        case GLFW_KEY_RIGHT:
-                            keys.emplace_back(NK_KEY_RIGHT, is_press);
-                            break;
-                    }
+                    case GLFW_KEY_RIGHT:
+                        keys.emplace_back(NK_KEY_RIGHT, is_press);
+                        break;
                 }
-            });
+            }
+        });
 
         window.register_mouse_callback([&](const double x_position, const double y_position) {
             most_recent_mouse_position = {x_position, y_position};
@@ -418,6 +414,21 @@ namespace nova::bf {
     }
 
     void NuklearDevice::save_framebuffer_size_ratio() { framebuffer_size_ratio = renderer.get_window().get_framebuffer_to_window_ratio(); }
+
+    void NuklearDevice::create_descriptor_sets(const renderer::Pipeline& pipeline) {
+        auto& device = renderer.get_engine();
+        if(pool == nullptr) {
+            const auto num_sampled_images = pipeline.pipeline_interface->get_num_sampled_images();
+            const auto num_samplers = pipeline.pipeline_interface->get_num_samplers();
+            const auto num_uniform_buffers = pipeline.pipeline_interface->get_num_uniform_buffers();
+            pool = device.create_descriptor_pool(num_sampled_images, num_samplers, num_uniform_buffers, *allocator);
+
+        } else {
+            device.reset_descriptor_pool(pool);
+        }
+
+        material_descriptors = device.create_descriptor_sets(pipeline.pipeline_interface, pool, *allocator);
+    }
 
     nk_buttons to_nk_mouse_button(const uint32_t button) {
         switch(button) {

@@ -3,9 +3,9 @@
 #include <optional>
 #include <unordered_map>
 
-#include <nova_renderer/ui_renderer.hpp>
 #include <nova_renderer/memory/allocators.hpp>
 #include <nova_renderer/renderables.hpp>
+#include <nova_renderer/ui_renderer.hpp>
 #include <nova_renderer/util/container_accessor.hpp>
 #include <nuklear.h>
 
@@ -43,7 +43,9 @@ namespace nova {
         struct NullNuklearImage : NuklearImage {
             nk_draw_null_texture nk_null_tex = {};
 
-            NullNuklearImage(const renderer::TextureResourceAccessor& image, struct nk_image nk_image = {}, nk_draw_null_texture null_tex = {});
+            NullNuklearImage(const renderer::TextureResourceAccessor& image,
+                             struct nk_image nk_image = {},
+                             nk_draw_null_texture null_tex = {});
         };
 
         struct NuklearVertex {
@@ -88,19 +90,17 @@ namespace nova {
 
             renderer::NovaRenderer& renderer;
 
-            glm::vec2 framebuffer_size_ratio;
+            glm::vec2 framebuffer_size_ratio{};
 
-            renderer::rhi::Buffer* ui_draw_params;
+            renderer::rhi::Buffer* ui_draw_params{};
 
-            renderer::RenderableId ui_renderable_id;
-
-            nk_buffer nk_cmds;
+            nk_buffer nk_cmds{};
 
             renderer::MapAccessor<renderer::MeshId, renderer::ProceduralMesh> mesh;
             std::vector<NuklearVertex> vertices;
-            nk_buffer nk_vertex_buffer;
+            nk_buffer nk_vertex_buffer{};
             std::vector<uint32_t> indices;
-            nk_buffer nk_index_buffer;
+            nk_buffer nk_index_buffer{};
 
             std::mutex key_buffer_mutex;
 
@@ -109,23 +109,31 @@ namespace nova {
              */
             std::vector<std::pair<nk_keys, bool>> keys;
 
-            glm::dvec2 most_recent_mouse_position;
+            glm::dvec2 most_recent_mouse_position{};
 
             std::optional<std::pair<nk_buttons, bool>> most_recent_mouse_button;
+
+            renderer::rhi::DescriptorPool* pool = nullptr;
+
+            /*!
+             * \brief Descriptor sets for the UI material
+             *
+             * The UI material doesn't _actually_ exist, because rendering UI is hard, but if there was a real UI material, these
+             * descriptors would be for that
+             */
+            std::pmr::vector<renderer::rhi::DescriptorSet*> material_descriptors;
 
             /*!
              * \brief List of all the descriptor sets that can hold an array of textures
              */
-            std::vector<renderer::rhi::DescriptorSet*> sets;
+            std::vector<renderer::rhi::DescriptorSet*> texture_array_descriptors;
             std::unordered_map<int, renderer::TextureResourceAccessor> textures;
-            uint32_t next_image_idx = 0;//static_cast<uint32_t>(ImageId::Count);
+            uint32_t next_image_idx = 0;
 
             std::unique_ptr<nk_font_atlas> nk_atlas;
             std::unique_ptr<NullNuklearImage> null_texture;
             std::unique_ptr<NuklearImage> font_image;
-            nk_font* font;
-            renderer::rhi::Pipeline* pipeline;
-            renderer::rhi::PipelineInterface* pipeline_interface;
+            nk_font* font{};
 
             std::unique_ptr<mem::AllocatorHandle<>> allocator;
 
@@ -140,6 +148,8 @@ namespace nova {
             void register_input_callbacks();
 
             void save_framebuffer_size_ratio();
+
+            void create_descriptor_sets(const renderer::Pipeline& pipeline);
 
         protected:
             /*!
