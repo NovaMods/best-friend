@@ -92,7 +92,7 @@ namespace nova {
 
             glm::vec2 framebuffer_size_ratio{};
 
-            renderer::rhi::Buffer* ui_draw_params{};
+            renderer::rhi::Buffer* ui_draw_params = nullptr;
 
             nk_buffer nk_cmds{};
 

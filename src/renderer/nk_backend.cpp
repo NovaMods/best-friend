@@ -51,7 +51,7 @@ namespace nova::bf {
                                        const nk_draw_null_texture null_tex)
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
 
-    NuklearDevice::NuklearDevice(NovaRenderer& renderer) 
+    NuklearDevice::NuklearDevice(NovaRenderer& renderer)
         : renderer(renderer), mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
         name = UI_RENDER_PASS_NAME;
@@ -174,6 +174,8 @@ namespace nova::bf {
         }
 
         cmds.bind_pipeline(pipeline->pipeline);
+
+        cmds.bind_descriptor_sets(material_descriptors, pipeline->pipeline_interface);
 
         const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
         cmds.bind_vertex_buffers({4, vertex_buffer});
@@ -418,16 +420,40 @@ namespace nova::bf {
     void NuklearDevice::create_descriptor_sets(const renderer::Pipeline& pipeline) {
         auto& device = renderer.get_engine();
         if(pool == nullptr) {
-            const auto num_sampled_images = pipeline.pipeline_interface->get_num_sampled_images();
-            const auto num_samplers = pipeline.pipeline_interface->get_num_samplers();
-            const auto num_uniform_buffers = pipeline.pipeline_interface->get_num_uniform_buffers();
-            pool = device.create_descriptor_pool(num_sampled_images, num_samplers, num_uniform_buffers, *allocator);
+            pool = device.create_descriptor_pool({{DescriptorType::UniformBuffer, 1},
+                                                  {DescriptorType::Texture, MAX_NUM_TEXTURES},
+                                                  {DescriptorType::Sampler, 1}},
+                                                 *allocator);
 
         } else {
             device.reset_descriptor_pool(pool);
         }
 
         material_descriptors = device.create_descriptor_sets(pipeline.pipeline_interface, pool, *allocator);
+
+        // This is hardcoded and kinda gross, but so is my life
+        std::pmr::vector<DescriptorSetWrite> writes;
+        writes.reserve(2);
+
+        {
+            auto& ui_params_write = writes.emplace_back();
+            ui_params_write.set = material_descriptors.at(0);
+            ui_params_write.binding = 0;
+            ui_params_write.type = DescriptorType::UniformBuffer;
+            auto& resource_info = ui_params_write.resources.emplace_back();
+            resource_info.buffer_info.buffer = ui_draw_params;
+        }
+
+        {
+            auto& sampler_write = writes.emplace_back();
+            sampler_write.set = material_descriptors.at(1);
+            sampler_write.binding = 0;
+            sampler_write.type = DescriptorType::Sampler;
+            auto& resource_info = sampler_write.resources.emplace_back();
+            resource_info.sampler_info.sampler = renderer.get_point_sampler();
+        }
+
+        device.update_descriptor_sets(writes);
     }
 
     nk_buttons to_nk_mouse_button(const uint32_t button) {
