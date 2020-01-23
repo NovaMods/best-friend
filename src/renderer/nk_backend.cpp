@@ -24,6 +24,8 @@ namespace nova::bf {
 
     const std::string FONT_ATLAS_NAME = "BestFriendFontAtlas";
 
+    const std::string UI_UBO_NAME = "BestFriendUiUbo";
+
     constexpr PixelFormatEnum UI_ATLAS_FORMAT = PixelFormatEnum::RGBA8;
     constexpr std::size_t UI_ATLAS_WIDTH = 512;
     constexpr std::size_t UI_ATLAS_HEIGHT = 512;
@@ -63,7 +65,7 @@ namespace nova::bf {
 
         init_nuklear();
 
-        create_textures();
+        create_resources();
 
         load_font();
 
@@ -257,14 +259,29 @@ namespace nova::bf {
         nk_buffer_init_fixed(&nk_index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
     }
 
-    void NuklearDevice::create_textures() {
-        // Create the null texture
+    void NuklearDevice::create_resources() {
+        create_null_texture();
+
+        create_ui_ubo();
+    }
+
+    void NuklearDevice::create_null_texture() {
         const std::optional<NuklearImage> null_image = create_image(NULL_TEXTURE_NAME, 8, 8, nullptr);
         if(null_image) {
             null_texture = std::make_unique<NullNuklearImage>(null_image->image, null_image->nk_image);
 
         } else {
             NOVA_LOG(ERROR) << "Could not create null texture";
+        }
+    }
+
+    void NuklearDevice::create_ui_ubo() {
+        auto& resource_manager = renderer.get_resource_manager();
+        if(const auto buffer = resource_manager.create_uniform_buffer(UI_UBO_NAME, sizeof(glm::mat4)); buffer) {
+            ui_draw_params = (*buffer)->buffer;
+
+        } else {
+            NOVA_LOG(ERROR) << "Could not create UI UBO";
         }
     }
 

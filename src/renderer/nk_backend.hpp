@@ -139,7 +139,11 @@ namespace nova {
 
             void init_nuklear();
 
-            void create_textures();
+            void create_resources();
+
+            void create_null_texture();
+
+            void create_ui_ubo();
 
             void load_font();
 
