@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <nova_renderer/nova_renderer.hpp>
 
 #include "ec/entity.hpp"

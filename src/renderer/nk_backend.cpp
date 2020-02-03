@@ -91,9 +91,7 @@ namespace nova::bf {
         // TODO: Scrolling of some sort
 
         // Consume keyboard input
-        for(const auto& [key, is_pressed] : keys) {
-            nk_input_key(ctx.get(), key, is_pressed);
-        }
+        keys.each_fwd([&](const std::pair<nk_keys, bool>& pair) { nk_input_key(ctx.get(), pair.first, pair.second); });
 
         keys.clear();
 
