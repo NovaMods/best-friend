@@ -19,7 +19,7 @@ using namespace rhi;
 namespace nova::bf {
     RX_LOG("NuklearRenderPass", logger);
 
-    constexpr const char* FONT_PATH = BEST_FRIEND_DATA_DIR "fonts/DroidSans.ttf";
+    constexpr const char* FONT_PATH = BEST_FRIEND_DATA_DIR "/fonts/DroidSans.ttf";
 
     constexpr const char* FONT_ATLAS_NAME = "BestFriendFontAtlas";
 
