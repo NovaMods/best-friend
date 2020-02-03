@@ -78,6 +78,8 @@ namespace nova::bf {
     NuklearDevice::~NuklearDevice() {
         nk_buffer_free(&nk_cmds);
         nk_clear(ctx.get());
+
+        allocator->destroy<nk_font_atlas>(nk_atlas);
     }
 
     std::shared_ptr<nk_context> NuklearDevice::get_context() const { return ctx; }
@@ -191,7 +193,7 @@ namespace nova::bf {
         current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
 
         // Iterator to the descriptor set to write the current textures to
-        auto descriptor_set_itr = texture_array_descriptors.begin();
+        auto cur_descriptor_set = 0;
 
         uint32_t num_sets_used = 0;
         uint32_t offset = 0;
@@ -203,35 +205,33 @@ namespace nova::bf {
             }
 
             const int tex_index = cmd->texture.id;
-            const auto tex_itr = textures.find(tex_index);
+            const auto* texture = textures.find(tex_index);
             if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
-                current_descriptor_textures.emplace_back(tex_itr->second->image);
+                current_descriptor_textures.emplace_back((*texture)->image);
 
             } else {
-                rx::vector<DescriptorSetWrite> writes(1, {}, *frame_ctx.allocator);
-                DescriptorSetWrite& write = writes[0];
-                write.set = *descriptor_set_itr;
+                DescriptorSetWrite write = {};
+                write.set = texture_array_descriptors[cur_descriptor_set];
                 write.binding = 0;
                 write.type = DescriptorType::CombinedImageSampler;
                 write.resources.reserve(current_descriptor_textures.size());
 
-                std::transform(current_descriptor_textures.begin(),
-                               current_descriptor_textures.end(),
-                               std::back_insert_iterator<rx::vector<DescriptorResourceInfo>>(write.resources),
-                               [&](Image* image) {
-                                   DescriptorResourceInfo info = {};
-                                   info.image_info.image = image;
-                                   info.image_info.format.pixel_format = UI_ATLAS_FORMAT;
-                                   info.image_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
-                                   info.image_info.format.width = UI_ATLAS_WIDTH;
-                                   info.image_info.format.height = UI_ATLAS_HEIGHT;
-                                   return info;
-                               });
+                current_descriptor_textures.each_fwd([&](Image* image) {
+                    DescriptorResourceInfo info = {};
+                    info.image_info.image = image;
+                    info.image_info.format.pixel_format = UI_ATLAS_FORMAT;
+                    info.image_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
+                    info.image_info.format.width = UI_ATLAS_WIDTH;
+                    info.image_info.format.height = UI_ATLAS_HEIGHT;
+                    write.resources.emplace_back(info);
+                });
 
+                rx::vector<DescriptorSetWrite> writes{frame_ctx.allocator};
+                writes.emplace_back(write);
                 renderer.get_engine().update_descriptor_sets(writes);
 
                 num_sets_used++;
-                ++descriptor_set_itr;
+                ++cur_descriptor_set;
             }
 
             const auto scissor_rect_x = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
@@ -289,25 +289,25 @@ namespace nova::bf {
     }
 
     void NuklearDevice::load_font() {
-        nk_atlas = nk_font_atlas{};
-        nk_font_atlas_init_default(nk_atlas.get());
-        nk_font_atlas_begin(nk_atlas.get());
+        nk_atlas = allocator->create<nk_font_atlas>();
+        nk_font_atlas_init_default(nk_atlas);
+        nk_font_atlas_begin(nk_atlas);
 
         // Todo: load a font
-        font = nk_font_atlas_add_from_file(nk_atlas.get(), FONT_PATH, 14, nullptr);
+        font = nk_font_atlas_add_from_file(nk_atlas, FONT_PATH, 14, nullptr);
         if(!font) {
             logger(rx::log::level::k_error, "Could not load font %s", FONT_PATH);
         }
 
         retrieve_font_atlas();
 
-        nk_font_atlas_end(nk_atlas.get(), nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &null_texture->nk_null_tex);
+        nk_font_atlas_end(nk_atlas, nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &null_texture->nk_null_tex);
         nk_style_set_font(ctx.get(), &font->handle);
     }
 
     void NuklearDevice::retrieve_font_atlas() {
         int width, height;
-        const void* image_data = nk_font_atlas_bake(nk_atlas.get(), &width, &height, NK_FONT_ATLAS_RGBA32);
+        const void* image_data = nk_font_atlas_bake(nk_atlas, &width, &height, NK_FONT_ATLAS_RGBA32);
 
         const auto new_font_atlas = create_image(FONT_ATLAS_NAME, width, height, image_data);
         if(new_font_atlas) {
