@@ -65,9 +65,9 @@ namespace nova {
              */
             void consume_input();
 
-            [[nodiscard]] rx::optional<NuklearImage> create_image(const std::string& name,
-                                                                  std::size_t width,
-                                                                  std::size_t height,
+            [[nodiscard]] rx::optional<NuklearImage> create_image(const rx::string& name,
+                                                                  rx_size width,
+                                                                  rx_size height,
                                                                   const void* image_data);
 
             void clear_context() const;
