@@ -119,7 +119,7 @@ namespace nova {
             rx::map<int, renderer::TextureResourceAccessor> textures;
             uint32_t next_image_idx = 0;
 
-            std::unique_ptr<nk_font_atlas> nk_atlas;
+            nk_font_atlas* nk_atlas;
             std::unique_ptr<NullNuklearImage> null_texture;
             std::unique_ptr<NuklearImage> font_image;
             nk_font* font{};
