@@ -1,10 +1,7 @@
 #pragma once
-#include <mutex>
-#include <optional>
-#include <unordered_map>
 
-#include <nova_renderer/memory/allocators.hpp>
 #include <nova_renderer/renderables.hpp>
+#include <nova_renderer/rhi/forward_decls.hpp>
 #include <nova_renderer/ui_renderer.hpp>
 #include <nova_renderer/util/container_accessor.hpp>
 #include <nuklear.h>
@@ -21,15 +18,7 @@ namespace nova {
 
         class ProceduralMesh;
 
-        namespace rhi {
-            class CommandList;
-
-            struct Buffer;
-            struct DescriptorSet;
-            struct Image;
-            struct Pipeline;
-        } // namespace rhi
-    }     // namespace renderer
+    } // namespace renderer
 
     namespace bf {
         struct NuklearImage {
@@ -76,10 +65,10 @@ namespace nova {
              */
             void consume_input();
 
-            [[nodiscard]] std::optional<NuklearImage> create_image(const std::string& name,
-                                                                   std::size_t width,
-                                                                   std::size_t height,
-                                                                   const void* image_data);
+            [[nodiscard]] rx::optional<NuklearImage> create_image(const std::string& name,
+                                                                  std::size_t width,
+                                                                  std::size_t height,
+                                                                  const void* image_data);
 
             void clear_context() const;
 
@@ -97,9 +86,9 @@ namespace nova {
             nk_buffer nk_cmds{};
 
             renderer::MapAccessor<renderer::MeshId, renderer::ProceduralMesh> mesh;
-            std::vector<NuklearVertex> vertices;
+            rx::vector<NuklearVertex> vertices;
             nk_buffer nk_vertex_buffer{};
-            std::vector<uint32_t> indices;
+            rx::vector<uint32_t> indices;
             nk_buffer nk_index_buffer{};
 
             std::mutex key_buffer_mutex;
@@ -107,11 +96,11 @@ namespace nova {
             /*!
              * \brief Vector of all the keys we received this frame and if they were pressed down or not
              */
-            std::vector<std::pair<nk_keys, bool>> keys;
+            rx::vector<std::pair<nk_keys, bool>> keys;
 
             glm::dvec2 most_recent_mouse_position{};
 
-            std::optional<std::pair<nk_buttons, bool>> most_recent_mouse_button;
+            rx::optional<std::pair<nk_buttons, bool>> most_recent_mouse_button;
 
             renderer::rhi::DescriptorPool* pool = nullptr;
 
@@ -121,13 +110,13 @@ namespace nova {
              * The UI material doesn't _actually_ exist, because rendering UI is hard, but if there was a real UI material, these
              * descriptors would be for that
              */
-            std::pmr::vector<renderer::rhi::DescriptorSet*> material_descriptors;
+            rx::vector<renderer::rhi::DescriptorSet*> material_descriptors;
 
             /*!
              * \brief List of all the descriptor sets that can hold an array of textures
              */
-            std::vector<renderer::rhi::DescriptorSet*> texture_array_descriptors;
-            std::unordered_map<int, renderer::TextureResourceAccessor> textures;
+            rx::vector<renderer::rhi::DescriptorSet*> texture_array_descriptors;
+            rx::map<int, renderer::TextureResourceAccessor> textures;
             uint32_t next_image_idx = 0;
 
             std::unique_ptr<nk_font_atlas> nk_atlas;
@@ -135,7 +124,7 @@ namespace nova {
             std::unique_ptr<NuklearImage> font_image;
             nk_font* font{};
 
-            std::unique_ptr<mem::AllocatorHandle<>> allocator;
+            rx::memory::allocator* allocator;
 
             void init_nuklear();
 
