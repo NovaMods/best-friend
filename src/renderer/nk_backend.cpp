@@ -12,6 +12,7 @@
 
 #include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
 #include "../util/constants.hpp"
+#include "rx/core/algorithm/max.h"
 using namespace nova::renderer;
 using namespace shaderpack;
 using namespace rhi;
@@ -24,6 +25,8 @@ namespace nova::bf {
     constexpr const char* FONT_ATLAS_NAME = "BestFriendFontAtlas";
 
     constexpr const char* UI_UBO_NAME = "BestFriendUiUbo";
+
+    constexpr uint32_t UI_TEXTURES_INDEX = 2;
 
     constexpr PixelFormatEnum UI_ATLAS_FORMAT = PixelFormatEnum::RGBA8;
     constexpr rx_size UI_ATLAS_WIDTH = 512;
@@ -142,6 +145,28 @@ namespace nova::bf {
         return create_info;
     }
 
+    void NuklearDevice::write_textures_to_descriptor(FrameContext& frame_ctx, rx::vector<Image*> current_descriptor_textures) {
+        DescriptorSetWrite write = {};
+        write.set = material_descriptors[UI_TEXTURES_INDEX];
+        write.binding = 0;
+        write.type = DescriptorType::CombinedImageSampler;
+        write.resources.reserve(current_descriptor_textures.size());
+
+        current_descriptor_textures.each_fwd([&](Image* image) {
+            DescriptorResourceInfo info = {};
+            info.image_info.image = image;
+            info.image_info.format.pixel_format = UI_ATLAS_FORMAT;
+            info.image_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
+            info.image_info.format.width = UI_ATLAS_WIDTH;
+            info.image_info.format.height = UI_ATLAS_HEIGHT;
+            write.resources.emplace_back(info);
+        });
+
+        rx::vector<DescriptorSetWrite> writes{frame_ctx.allocator};
+        writes.emplace_back(write);
+        renderer.get_engine().update_descriptor_sets(writes);
+    }
+
     void NuklearDevice::render_ui(CommandList& cmds, FrameContext& frame_ctx) {
         static const nk_draw_vertex_layout_element vertex_layout[] =
             {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
@@ -196,6 +221,10 @@ namespace nova::bf {
         uint32_t num_sets_used = 0;
         uint32_t offset = 0;
 
+        // Two passes through the draw commands: one to collect the textures we'll need, one to issue the drawcalls. This lets us update the
+        // texture descriptors before they're bound to the command list, because apparently my 1080 doesn't support update-after-bind :<
+
+        // Collect textures
         for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
             cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
             if(cmd->elem_count == 0) {
@@ -208,34 +237,33 @@ namespace nova::bf {
                 current_descriptor_textures.emplace_back((*texture)->image);
 
             } else {
-                DescriptorSetWrite write = {};
-                write.set = texture_array_descriptors[cur_descriptor_set];
-                write.binding = 0;
-                write.type = DescriptorType::CombinedImageSampler;
-                write.resources.reserve(current_descriptor_textures.size());
-
-                current_descriptor_textures.each_fwd([&](Image* image) {
-                    DescriptorResourceInfo info = {};
-                    info.image_info.image = image;
-                    info.image_info.format.pixel_format = UI_ATLAS_FORMAT;
-                    info.image_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
-                    info.image_info.format.width = UI_ATLAS_WIDTH;
-                    info.image_info.format.height = UI_ATLAS_HEIGHT;
-                    write.resources.emplace_back(info);
-                });
-
-                rx::vector<DescriptorSetWrite> writes{frame_ctx.allocator};
-                writes.emplace_back(write);
-                renderer.get_engine().update_descriptor_sets(writes);
+                // TODO: Remove this branch. We need to make sure that th descriptor array has enough space for all our textures, and I
+                // don't know how to do that yet
+                write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
 
                 num_sets_used++;
                 ++cur_descriptor_set;
             }
+        }
 
-            const auto scissor_rect_x = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
-            const auto scissor_rect_y = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
-            const auto scissor_rect_width = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
-            const auto scissor_rect_height = static_cast<uint32_t>(std::max(0.0f, std::round(cmd->clip_rect.h * framebuffer_size_ratio.y)));
+        write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
+
+        // Record drawcalls
+        for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
+            cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
+            if(cmd->elem_count == 0) {
+                continue;
+            }
+
+            const auto scissor_rect_x = static_cast<uint32_t>(
+                rx::algorithm::max(0.0f, std::round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
+            const auto scissor_rect_y = static_cast<uint32_t>(
+                rx::algorithm::max(0.0f, std::round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
+            const auto scissor_rect_width = static_cast<uint32_t>(
+                rx::algorithm::max(0.0f, std::round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
+            const auto scissor_rect_height = static_cast<uint32_t>(
+                rx::algorithm::max(0.0f, std::round(cmd->clip_rect.h * framebuffer_size_ratio.y)));
+
             cmds.set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
 
             cmds.draw_indexed_mesh(cmd->elem_count, offset);
