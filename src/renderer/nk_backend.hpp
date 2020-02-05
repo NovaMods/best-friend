@@ -74,7 +74,8 @@ namespace nova {
 
             static renderer::shaderpack::RenderPassCreateInfo get_create_info();
             void write_textures_to_descriptor(renderer::FrameContext& frame_ctx,
-                                              rx::vector<renderer::rhi::Image*> current_descriptor_textures);
+                                              const rx::vector<renderer::rhi::Image*>& current_descriptor_textures);
+
         private:
             std::shared_ptr<nk_context> ctx;
 

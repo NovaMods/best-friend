@@ -26,7 +26,8 @@ namespace nova::bf {
 
     constexpr const char* UI_UBO_NAME = "BestFriendUiUbo";
 
-    constexpr uint32_t UI_TEXTURES_INDEX = 2;
+    constexpr uint32_t UI_TEXTURES_DESCRIPTOR_SET = 1;
+    constexpr uint32_t UI_TEXTURES_DESCRIPTOR_BINDING = 1;
 
     constexpr PixelFormatEnum UI_ATLAS_FORMAT = PixelFormatEnum::RGBA8;
     constexpr rx_size UI_ATLAS_WIDTH = 512;
@@ -145,11 +146,11 @@ namespace nova::bf {
         return create_info;
     }
 
-    void NuklearDevice::write_textures_to_descriptor(FrameContext& frame_ctx, rx::vector<Image*> current_descriptor_textures) {
+    void NuklearDevice::write_textures_to_descriptor(FrameContext& frame_ctx, const rx::vector<Image*>& current_descriptor_textures) {
         DescriptorSetWrite write = {};
-        write.set = material_descriptors[UI_TEXTURES_INDEX];
-        write.binding = 0;
-        write.type = DescriptorType::CombinedImageSampler;
+        write.set = material_descriptors[UI_TEXTURES_DESCRIPTOR_SET];
+        write.binding = UI_TEXTURES_DESCRIPTOR_BINDING;
+        write.type = DescriptorType::Texture;
         write.resources.reserve(current_descriptor_textures.size());
 
         current_descriptor_textures.each_fwd([&](Image* image) {
@@ -224,9 +225,12 @@ namespace nova::bf {
         // Two passes through the draw commands: one to collect the textures we'll need, one to issue the drawcalls. This lets us update the
         // texture descriptors before they're bound to the command list, because apparently my 1080 doesn't support update-after-bind :<
 
+        uint32_t cur_cmd_idx = 0;
+
         // Collect textures
         for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
             cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
+
             if(cmd->elem_count == 0) {
                 continue;
             }
@@ -244,9 +248,12 @@ namespace nova::bf {
                 num_sets_used++;
                 ++cur_descriptor_set;
             }
+            cur_cmd_idx++;
         }
 
         write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
+
+        cur_cmd_idx = 0;
 
         // Record drawcalls
         for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
