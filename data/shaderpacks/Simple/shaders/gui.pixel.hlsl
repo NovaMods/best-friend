@@ -2,7 +2,7 @@
 SamplerState ui_sampler : register(s0);
 
 [[vk::binding(1, 1)]]
-Texture2D ui_textures[] : register(t0);
+Texture2D ui_textures[256] : register(t0);
 
 struct VsOutput {
     float4 position : SV_POSITION;
