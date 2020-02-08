@@ -26,6 +26,12 @@ namespace nova::bf {
 
     constexpr const char* UI_UBO_NAME = "BestFriendUiUbo";
 
+    constexpr uint32_t UI_UBO_DESCRIPTOR_SET = 0;
+    constexpr uint32_t UI_UBO_DESCRIPTOR_BINDING = 0;
+
+    constexpr uint32_t UI_SAMPLER_DESCRIPTOR_SET = 1;
+    constexpr uint32_t UI_SAMPLER_DESCRIPTOR_BINDING = 0;
+
     constexpr uint32_t UI_TEXTURES_DESCRIPTOR_SET = 1;
     constexpr uint32_t UI_TEXTURES_DESCRIPTOR_BINDING = 1;
 
@@ -486,13 +492,13 @@ namespace nova::bf {
         material_descriptors = device.create_descriptor_sets(pipeline.pipeline_interface, pool, allocator);
 
         // This is hardcoded and kinda gross, but so is my life
-        rx::vector<DescriptorSetWrite> writes;
+        rx::vector<DescriptorSetWrite> writes{allocator};
         writes.reserve(2);
 
         {
             DescriptorSetWrite ui_params_write = {};
-            ui_params_write.set = material_descriptors[0];
-            ui_params_write.binding = 0;
+            ui_params_write.set = material_descriptors[UI_UBO_DESCRIPTOR_SET];
+            ui_params_write.binding = UI_UBO_DESCRIPTOR_BINDING;
             ui_params_write.type = DescriptorType::UniformBuffer;
 
             DescriptorResourceInfo resource_info = {};
@@ -504,8 +510,8 @@ namespace nova::bf {
 
         {
             DescriptorSetWrite sampler_write = {};
-            sampler_write.set = material_descriptors[1];
-            sampler_write.binding = 0;
+            sampler_write.set = material_descriptors[UI_SAMPLER_DESCRIPTOR_SET];
+            sampler_write.binding = UI_SAMPLER_DESCRIPTOR_BINDING;
             sampler_write.type = DescriptorType::Sampler;
 
             DescriptorResourceInfo resource_info = {};
