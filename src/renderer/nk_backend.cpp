@@ -221,6 +221,7 @@ namespace nova::bf {
         // Textures to bind to the current descriptor set
         rx::vector<Image*> current_descriptor_textures{frame_ctx.allocator};
         current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
+        current_descriptor_textures.push_back(null_texture->image->image);
 
         // Iterator to the descriptor set to write the current textures to
         auto cur_descriptor_set = 0;
