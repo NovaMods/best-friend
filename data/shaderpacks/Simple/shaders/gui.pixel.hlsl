@@ -12,6 +12,6 @@ struct VsOutput {
 };
 
 float4 main(VsOutput input) : SV_Target {
-    float4 texture_color = ui_textures[input.texture_id].Sample(ui_sampler, input.uv);
+    float4 texture_color = float4(1, 0, 1, 1); // ui_textures[input.texture_id].Sample(ui_sampler, input.uv);
     return input.color * texture_color;
 }

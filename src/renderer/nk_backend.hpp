@@ -73,6 +73,7 @@ namespace nova {
             void clear_context() const;
 
             static renderer::shaderpack::RenderPassCreateInfo get_create_info();
+
             void write_textures_to_descriptor(renderer::FrameContext& frame_ctx,
                                               const rx::vector<renderer::rhi::Image*>& current_descriptor_textures);
 
@@ -90,7 +91,7 @@ namespace nova {
             renderer::MapAccessor<renderer::MeshId, renderer::ProceduralMesh> mesh;
             rx::vector<NuklearVertex> vertices;
             nk_buffer nk_vertex_buffer{};
-            rx::vector<uint32_t> indices;
+            rx::vector<uint16_t> indices;
             nk_buffer nk_index_buffer{};
 
             std::mutex key_buffer_mutex;
@@ -143,6 +144,11 @@ namespace nova {
             void create_descriptor_sets(const renderer::Pipeline& pipeline, uint32_t frame_idx);
 
         protected:
+            /*!
+             * \brief Uploads vertex data for this frame's UI
+             */
+            void setup_renderpass(renderer::rhi::CommandList& cmds, renderer::FrameContext& frame_ctx) override;
+
             /*!
              * \brief Renders all the UI elements that were drawn to the context
              */

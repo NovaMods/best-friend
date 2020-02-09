@@ -174,140 +174,6 @@ namespace nova::bf {
         renderer.get_engine().update_descriptor_sets(writes);
     }
 
-    void NuklearDevice::render_ui(CommandList& cmds, FrameContext& frame_ctx) {
-        static const nk_draw_vertex_layout_element vertex_layout[] =
-            {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
-             {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
-             {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
-             {NK_VERTEX_LAYOUT_END}};
-
-        const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
-
-        nk_convert_config config = {};
-        config.vertex_layout = vertex_layout;
-        config.vertex_size = sizeof(NuklearVertex);
-        config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
-        config.null = null_texture->nk_null_tex;
-        config.circle_segment_count = 22;
-        config.curve_segment_count = 22;
-        config.arc_segment_count = 22;
-        config.global_alpha = 1.0f;
-        config.shape_AA = NK_ANTI_ALIASING_ON;
-        config.line_AA = NK_ANTI_ALIASING_ON;
-
-        // vertex_buffer and index_buffer let Nuklear write vertex information directly
-        nk_convert(ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
-        mesh->set_vertex_data(vertices.data(), vertices.size() * sizeof(NuklearVertex));
-        mesh->set_index_data(indices.data(), indices.size() * sizeof(uint32_t));
-
-        mesh->record_commands_to_upload_data(&cmds, frame_idx);
-
-        record_pre_renderpass_barriers(cmds, frame_ctx);
-
-        const auto framebuffer = get_framebuffer(frame_ctx);
-
-        cmds.begin_renderpass(renderpass, framebuffer);
-
-        const auto pipeline = frame_ctx.nova->get_pipeline_storage().get_pipeline(UI_PIPELINE_NAME);
-        if(!pipeline) {
-            logger(rx::log::level::k_error, "Could not get pipeline %s from Nova's pipeline storage", UI_PIPELINE_NAME);
-            return;
-        }
-
-        if(material_descriptors[frame_idx].is_empty()) {
-            create_descriptor_sets(*pipeline, frame_idx);
-        }
-
-        cmds.bind_pipeline(pipeline->pipeline);
-
-        cmds.bind_descriptor_sets(material_descriptors[frame_idx], pipeline->pipeline_interface);
-
-        const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
-        rx::vector<rhi::Buffer*> vertex_buffers;
-        for(uint32_t i = 0; i < 4; i++) {
-            vertex_buffers.push_back(vertex_buffer);
-        }
-        cmds.bind_vertex_buffers(vertex_buffers);
-        cmds.bind_index_buffer(index_buffer);
-
-        // Textures to bind to the current descriptor set
-        rx::vector<Image*> current_descriptor_textures{frame_ctx.allocator};
-        current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
-        current_descriptor_textures.push_back(null_texture->image->image);
-
-        // Iterator to the descriptor set to write the current textures to
-        auto cur_descriptor_set = 0;
-
-        uint32_t num_sets_used = 0;
-        uint32_t offset = 0;
-
-        // Two passes through the draw commands: one to collect the textures we'll need, one to issue the drawcalls. This lets us update the
-        // texture descriptors before they're bound to the command list, because apparently my 1080 doesn't support update-after-bind :<
-
-        uint32_t cur_cmd_idx = 0;
-
-        // Collect textures
-        for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
-            cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
-
-            if(cmd->elem_count == 0) {
-                continue;
-            }
-
-            const int tex_index = cmd->texture.id;
-            const auto* texture = textures.find(tex_index);
-            if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
-                current_descriptor_textures.emplace_back((*texture)->image);
-
-            } else {
-                // TODO: Remove this branch. We need to make sure that th descriptor array has enough space for all our textures, and I
-                // don't know how to do that yet
-                write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
-
-                num_sets_used++;
-                ++cur_descriptor_set;
-            }
-            cur_cmd_idx++;
-        }
-
-        write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
-
-        cur_cmd_idx = 0;
-
-        // Record drawcalls
-        for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
-            cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
-            if(cmd->elem_count == 0) {
-                continue;
-            }
-
-            const auto scissor_rect_x = static_cast<uint32_t>(
-                rx::algorithm::max(0.0f, std::round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
-            const auto scissor_rect_y = static_cast<uint32_t>(
-                rx::algorithm::max(0.0f, std::round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
-            const auto scissor_rect_width = static_cast<uint32_t>(
-                rx::algorithm::max(0.0f, std::round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
-            const auto scissor_rect_height = static_cast<uint32_t>(
-                rx::algorithm::max(0.0f, std::round(cmd->clip_rect.h * framebuffer_size_ratio.y)));
-
-            cmds.set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
-
-            cmds.draw_indexed_mesh(cmd->elem_count, offset);
-
-            offset += cmd->elem_count;
-        }
-
-        if(num_sets_used > 1) {
-            logger(rx::log::level::k_info, "Used %u descriptor sets. Maybe you should only use one", num_sets_used);
-        }
-
-        clear_context();
-
-        cmds.end_renderpass();
-
-        record_post_renderpass_barriers(cmds, frame_ctx);
-    }
-
     void NuklearDevice::init_nuklear() {
         ctx = std::make_shared<nk_context>();
         nk_init_default(ctx.get(), nullptr);
@@ -501,7 +367,6 @@ namespace nova::bf {
             resource_counts.insert(DescriptorType::Texture, MAX_NUM_TEXTURES * NUM_IN_FLIGHT_FRAMES);
             resource_counts.insert(DescriptorType::Sampler, NUM_IN_FLIGHT_FRAMES);
             pool = device.create_descriptor_pool(resource_counts, allocator);
-
         }
 
         material_descriptors[frame_idx] = device.create_descriptor_sets(pipeline.pipeline_interface, pool, allocator);
@@ -537,6 +402,135 @@ namespace nova::bf {
         }
 
         device.update_descriptor_sets(writes);
+    }
+
+    void NuklearDevice::setup_renderpass(renderer::rhi::CommandList& cmds, renderer::FrameContext& frame_ctx) {
+        static const nk_draw_vertex_layout_element vertex_layout[] =
+            {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
+             {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
+             {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
+             {NK_VERTEX_LAYOUT_END}};
+
+        const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
+
+        nk_convert_config config = {};
+        config.vertex_layout = vertex_layout;
+        config.vertex_size = sizeof(NuklearVertex);
+        config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
+        config.null = null_texture->nk_null_tex;
+        config.circle_segment_count = 22;
+        config.curve_segment_count = 22;
+        config.arc_segment_count = 22;
+        config.global_alpha = 1.0f;
+        config.shape_AA = NK_ANTI_ALIASING_ON;
+        config.line_AA = NK_ANTI_ALIASING_ON;
+
+        // vertex_buffer and index_buffer let Nuklear write vertex information directly
+        nk_convert(ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
+
+        mesh->set_vertex_data(vertices.data(), vertices.size() * sizeof(NuklearVertex));
+        mesh->set_index_data(indices.data(), indices.size() * sizeof(uint16_t));
+
+        mesh->record_commands_to_upload_data(&cmds, frame_idx);
+    }
+
+    void NuklearDevice::render_ui(CommandList& cmds, FrameContext& frame_ctx) {
+        const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
+
+        const auto pipeline = frame_ctx.nova->get_pipeline_storage().get_pipeline(UI_PIPELINE_NAME);
+        if(!pipeline) {
+            logger(rx::log::level::k_error, "Could not get pipeline %s from Nova's pipeline storage", UI_PIPELINE_NAME);
+            return;
+        }
+
+        if(material_descriptors[frame_idx].is_empty()) {
+            create_descriptor_sets(*pipeline, frame_idx);
+        }
+
+        cmds.bind_pipeline(pipeline->pipeline);
+
+        cmds.bind_descriptor_sets(material_descriptors[frame_idx], pipeline->pipeline_interface);
+
+        const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
+        rx::vector<rhi::Buffer*> vertex_buffers;
+        for(uint32_t i = 0; i < 4; i++) {
+            vertex_buffers.push_back(vertex_buffer);
+        }
+        cmds.bind_vertex_buffers(vertex_buffers);
+        cmds.bind_index_buffer(index_buffer);
+
+        // Textures to bind to the current descriptor set
+        rx::vector<Image*> current_descriptor_textures{frame_ctx.allocator};
+        current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
+        current_descriptor_textures.push_back(null_texture->image->image);
+
+        // Iterator to the descriptor set to write the current textures to
+        auto cur_descriptor_set = 0;
+
+        uint32_t num_sets_used = 0;
+        uint32_t offset = 0;
+
+        // Two passes through the draw commands: one to collect the textures we'll need, one to issue the drawcalls. This lets us update the
+        // texture descriptors before they're bound to the command list, because apparently my 1080 doesn't support update-after-bind :<
+
+        uint32_t cur_cmd_idx = 0;
+
+        // Collect textures
+        for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
+            cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
+
+            if(cmd->elem_count == 0) {
+                continue;
+            }
+
+            const int tex_index = cmd->texture.id;
+            const auto* texture = textures.find(tex_index);
+            if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
+                current_descriptor_textures.emplace_back((*texture)->image);
+
+            } else {
+                // TODO: Remove this branch. We need to make sure that th descriptor array has enough space for all our textures, and I
+                // don't know how to do that yet
+                write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
+
+                num_sets_used++;
+                ++cur_descriptor_set;
+            }
+            cur_cmd_idx++;
+        }
+
+        write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
+
+        cur_cmd_idx = 0;
+
+        // Record drawcalls
+        for(const nk_draw_command* cmd = nk__draw_begin(ctx.get(), &nk_cmds); cmd != nullptr;
+            cmd = nk__draw_next(cmd, &nk_cmds, ctx.get())) {
+            if(cmd->elem_count == 0) {
+                continue;
+            }
+
+            const auto scissor_rect_x = static_cast<uint32_t>(
+                rx::algorithm::max(0.0f, round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
+            const auto scissor_rect_y = static_cast<uint32_t>(
+                rx::algorithm::max(0.0f, round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
+            const auto scissor_rect_width = static_cast<uint32_t>(
+                rx::algorithm::max(0.0f, round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
+            const auto scissor_rect_height = static_cast<uint32_t>(
+                rx::algorithm::max(0.0f, round(cmd->clip_rect.h * framebuffer_size_ratio.y)));
+
+            cmds.set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
+
+            cmds.draw_indexed_mesh(cmd->elem_count, offset);
+
+            offset += cmd->elem_count;
+        }
+
+        if(num_sets_used > 1) {
+            logger(rx::log::level::k_info, "Used %u descriptor sets. Maybe you should only use one", num_sets_used);
+        }
+
+        clear_context();
     }
 
     nk_buttons to_nk_mouse_button(const uint32_t button) {

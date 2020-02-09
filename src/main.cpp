@@ -20,6 +20,7 @@ int main(int argc, const char** argv) {
 #if NOVA_DEBUG
     settings.debug.enabled = true;
     settings.debug.enable_validation_layers = true;
+    settings.debug.enable_gpu_based_validation = true;
 #endif
 
     settings.window.title = "Best Friend Train Viewer";
