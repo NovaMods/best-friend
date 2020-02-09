@@ -12,6 +12,12 @@ struct VsOutput {
 };
 
 float4 main(VsOutput input) : SV_Target {
-    float4 texture_color = float4(1, 0, 1, 1); // ui_textures[input.texture_id].Sample(ui_sampler, input.uv);
-    return input.color * texture_color;
+    uint red = (input.color >> 24) & 0xFF;
+    uint green = (input.color >> 16) & 0xFF;
+    uint blue = (input.color >> 8) & 0xFF;
+    uint alpha = input.color & 0xFF;
+    float4 vertex_color = float4(red, green, blue, alpha) / 255.0f;
+
+    // float4 texture_color = ui_textures[input.texture_id].Sample(ui_sampler, input.uv);
+    return vertex_color;// * texture_color;
 }

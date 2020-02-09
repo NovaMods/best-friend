@@ -404,8 +404,8 @@ namespace nova::bf {
         device.update_descriptor_sets(writes);
     }
 
-    void NuklearDevice::setup_renderpass(renderer::rhi::CommandList& cmds, renderer::FrameContext& frame_ctx) {
-        static const nk_draw_vertex_layout_element vertex_layout[] =
+    void NuklearDevice::setup_renderpass(CommandList& cmds, FrameContext& frame_ctx) {
+        static const nk_draw_vertex_layout_element VERTEX_LAYOUT[] =
             {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
              {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
              {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
@@ -414,7 +414,7 @@ namespace nova::bf {
         const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
 
         nk_convert_config config = {};
-        config.vertex_layout = vertex_layout;
+        config.vertex_layout = VERTEX_LAYOUT;
         config.vertex_size = sizeof(NuklearVertex);
         config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
         config.null = null_texture->nk_null_tex;
@@ -452,7 +452,7 @@ namespace nova::bf {
         cmds.bind_descriptor_sets(material_descriptors[frame_idx], pipeline->pipeline_interface);
 
         const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
-        rx::vector<rhi::Buffer*> vertex_buffers;
+        rx::vector<Buffer*> vertex_buffers;
         for(uint32_t i = 0; i < 4; i++) {
             vertex_buffers.push_back(vertex_buffer);
         }

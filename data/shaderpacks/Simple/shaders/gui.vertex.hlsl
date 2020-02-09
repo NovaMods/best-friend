@@ -7,7 +7,7 @@ struct VsInput {
 struct VsOutput {
     float4 position : SV_POSITION;
     float2 uv : TEXCOORD;
-    float4 color : COLOR;
+    uint color : COLOR;
     uint texture_id : INDEX;
 };
 
@@ -26,11 +26,7 @@ VsOutput main(VsInput input) {
 
     output.uv = input.uv;
 
-    uint red = (input.color >> 24) & 0xFF;
-    uint green = (input.color >> 16) & 0xFF;
-    uint blue = (input.color >> 8) & 0xFF;
-    uint alpha = input.color & 0xFF;
-    output.color = float4(red, green, blue, alpha) / 255.0f;
+    output.color = input.color;
 
     output.texture_id = 0;//input.texture_id;
 
