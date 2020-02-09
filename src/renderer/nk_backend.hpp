@@ -112,12 +112,8 @@ namespace nova {
              * The UI material doesn't _actually_ exist, because rendering UI is hard, but if there was a real UI material, these
              * descriptors would be for that
              */
-            rx::vector<renderer::rhi::DescriptorSet*> material_descriptors;
+            rx::array<rx::vector<renderer::rhi::DescriptorSet*>[renderer::NUM_IN_FLIGHT_FRAMES]> material_descriptors;
 
-            /*!
-             * \brief List of all the descriptor sets that can hold an array of textures
-             */
-            rx::vector<renderer::rhi::DescriptorSet*> texture_array_descriptors;
             rx::map<int, renderer::TextureResourceAccessor> textures;
             uint32_t next_image_idx = 0;
 
@@ -144,7 +140,7 @@ namespace nova {
 
             void save_framebuffer_size_ratio();
 
-            void create_descriptor_sets(const renderer::Pipeline& pipeline);
+            void create_descriptor_sets(const renderer::Pipeline& pipeline, uint32_t frame_idx);
 
         protected:
             /*!

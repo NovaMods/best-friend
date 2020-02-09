@@ -69,8 +69,8 @@ namespace nova::bf {
 
         allocator = renderer.get_global_allocator();
 
-        vertices.reserve(MAX_VERTEX_BUFFER_SIZE / sizeof(NuklearVertex));
-        indices.reserve(MAX_INDEX_BUFFER_SIZE / sizeof(uint32_t));
+        vertices.resize(MAX_VERTEX_BUFFER_SIZE / sizeof(NuklearVertex));
+        indices.resize(MAX_INDEX_BUFFER_SIZE / sizeof(uint32_t));
 
         init_nuklear();
 
@@ -154,7 +154,7 @@ namespace nova::bf {
 
     void NuklearDevice::write_textures_to_descriptor(FrameContext& frame_ctx, const rx::vector<Image*>& current_descriptor_textures) {
         DescriptorSetWrite write = {};
-        write.set = material_descriptors[UI_TEXTURES_DESCRIPTOR_SET];
+        write.set = material_descriptors[frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES][UI_TEXTURES_DESCRIPTOR_SET];
         write.binding = UI_TEXTURES_DESCRIPTOR_BINDING;
         write.type = DescriptorType::Texture;
         write.resources.reserve(current_descriptor_textures.size());
@@ -181,6 +181,8 @@ namespace nova::bf {
              {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
              {NK_VERTEX_LAYOUT_END}};
 
+        const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
+
         nk_convert_config config = {};
         config.vertex_layout = vertex_layout;
         config.vertex_size = sizeof(NuklearVertex);
@@ -195,6 +197,16 @@ namespace nova::bf {
 
         // vertex_buffer and index_buffer let Nuklear write vertex information directly
         nk_convert(ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
+        mesh->set_vertex_data(vertices.data(), vertices.size() * sizeof(NuklearVertex));
+        mesh->set_index_data(indices.data(), indices.size() * sizeof(uint32_t));
+
+        mesh->record_commands_to_upload_data(&cmds, frame_idx);
+
+        record_pre_renderpass_barriers(cmds, frame_ctx);
+
+        const auto framebuffer = get_framebuffer(frame_ctx);
+
+        cmds.begin_renderpass(renderpass, framebuffer);
 
         const auto pipeline = frame_ctx.nova->get_pipeline_storage().get_pipeline(UI_PIPELINE_NAME);
         if(!pipeline) {
@@ -202,13 +214,13 @@ namespace nova::bf {
             return;
         }
 
-        if(texture_array_descriptors.is_empty()) {
-            create_descriptor_sets(*pipeline);
+        if(material_descriptors[frame_idx].is_empty()) {
+            create_descriptor_sets(*pipeline, frame_idx);
         }
 
         cmds.bind_pipeline(pipeline->pipeline);
 
-        cmds.bind_descriptor_sets(material_descriptors, pipeline->pipeline_interface);
+        cmds.bind_descriptor_sets(material_descriptors[frame_idx], pipeline->pipeline_interface);
 
         const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
         rx::vector<rhi::Buffer*> vertex_buffers;
@@ -290,6 +302,10 @@ namespace nova::bf {
         }
 
         clear_context();
+
+        cmds.end_renderpass();
+
+        record_post_renderpass_barriers(cmds, frame_ctx);
     }
 
     void NuklearDevice::init_nuklear() {
@@ -477,20 +493,18 @@ namespace nova::bf {
 
     void NuklearDevice::save_framebuffer_size_ratio() { framebuffer_size_ratio = renderer.get_window().get_framebuffer_to_window_ratio(); }
 
-    void NuklearDevice::create_descriptor_sets(const renderer::Pipeline& pipeline) {
+    void NuklearDevice::create_descriptor_sets(const renderer::Pipeline& pipeline, const uint32_t frame_idx) {
         auto& device = renderer.get_engine();
         if(pool == nullptr) {
             rx::map<DescriptorType, uint32_t> resource_counts;
-            resource_counts.insert(DescriptorType::UniformBuffer, 1);
-            resource_counts.insert(DescriptorType::Texture, MAX_NUM_TEXTURES);
-            resource_counts.insert(DescriptorType::Sampler, 1);
+            resource_counts.insert(DescriptorType::UniformBuffer, NUM_IN_FLIGHT_FRAMES);
+            resource_counts.insert(DescriptorType::Texture, MAX_NUM_TEXTURES * NUM_IN_FLIGHT_FRAMES);
+            resource_counts.insert(DescriptorType::Sampler, NUM_IN_FLIGHT_FRAMES);
             pool = device.create_descriptor_pool(resource_counts, allocator);
 
-        } else {
-            device.reset_descriptor_pool(pool);
         }
 
-        material_descriptors = device.create_descriptor_sets(pipeline.pipeline_interface, pool, allocator);
+        material_descriptors[frame_idx] = device.create_descriptor_sets(pipeline.pipeline_interface, pool, allocator);
 
         // This is hardcoded and kinda gross, but so is my life
         rx::vector<DescriptorSetWrite> writes{allocator};
@@ -498,11 +512,11 @@ namespace nova::bf {
 
         {
             DescriptorSetWrite ui_params_write = {};
-            ui_params_write.set = material_descriptors[UI_UBO_DESCRIPTOR_SET];
+            ui_params_write.set = material_descriptors[frame_idx][UI_UBO_DESCRIPTOR_SET];
             ui_params_write.binding = UI_UBO_DESCRIPTOR_BINDING;
             ui_params_write.type = DescriptorType::UniformBuffer;
 
-            DescriptorResourceInfo resource_info = {};
+            DescriptorResourceInfo resource_info;
             resource_info.buffer_info.buffer = ui_draw_params;
             ui_params_write.resources.emplace_back(resource_info);
 
@@ -511,11 +525,11 @@ namespace nova::bf {
 
         {
             DescriptorSetWrite sampler_write = {};
-            sampler_write.set = material_descriptors[UI_SAMPLER_DESCRIPTOR_SET];
+            sampler_write.set = material_descriptors[frame_idx][UI_SAMPLER_DESCRIPTOR_SET];
             sampler_write.binding = UI_SAMPLER_DESCRIPTOR_BINDING;
             sampler_write.type = DescriptorType::Sampler;
 
-            DescriptorResourceInfo resource_info = {};
+            DescriptorResourceInfo resource_info;
             resource_info.sampler_info.sampler = renderer.get_point_sampler();
             sampler_write.resources.emplace_back(resource_info);
 
