@@ -432,6 +432,19 @@ namespace nova::bf {
         mesh->set_index_data(indices.data(), indices.size() * sizeof(uint16_t));
 
         mesh->record_commands_to_upload_data(&cmds, frame_idx);
+
+        const auto window_size = frame_ctx.nova->get_window().get_window_size();
+
+        glm::mat4 ui_matrix{
+            {2.0f, 0.0f, 0.0f, 0.0f},
+            {0.0f, -2.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, -1.0f, 0.0f},
+            {-1.0f, 1.0f, 0.0f, 1.0f},
+        };
+        ui_matrix[0][0] /= window_size.x;
+        ui_matrix[1][1] /= window_size.y;
+
+        frame_ctx.nova->get_engine().write_data_to_buffer(&ui_matrix[0][0], sizeof(glm::mat4), 0, ui_draw_params);
     }
 
     void NuklearDevice::render_ui(CommandList& cmds, FrameContext& frame_ctx) {
@@ -510,10 +523,8 @@ namespace nova::bf {
                 continue;
             }
 
-            const auto scissor_rect_x = static_cast<uint32_t>(
-                rx::algorithm::max(0.0f, round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
-            const auto scissor_rect_y = static_cast<uint32_t>(
-                rx::algorithm::max(0.0f, round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
+            const auto scissor_rect_x = static_cast<uint32_t>(rx::algorithm::max(0.0f, round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
+            const auto scissor_rect_y = static_cast<uint32_t>(rx::algorithm::max(0.0f, round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
             const auto scissor_rect_width = static_cast<uint32_t>(
                 rx::algorithm::max(0.0f, round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
             const auto scissor_rect_height = static_cast<uint32_t>(

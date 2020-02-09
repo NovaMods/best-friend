@@ -7,7 +7,7 @@ Texture2D ui_textures[256] : register(t0);
 struct VsOutput {
     float4 position : SV_POSITION;
     float2 uv : TEXCOORD;
-    float4 color : COLOR;
+    uint color : COLOR;
     uint texture_id : INDEX;
 };
 
