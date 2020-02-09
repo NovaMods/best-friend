@@ -457,7 +457,7 @@ namespace nova::bf {
             vertex_buffers.push_back(vertex_buffer);
         }
         cmds.bind_vertex_buffers(vertex_buffers);
-        cmds.bind_index_buffer(index_buffer);
+        cmds.bind_index_buffer(index_buffer, IndexType::Uint16);
 
         // Textures to bind to the current descriptor set
         rx::vector<Image*> current_descriptor_textures{frame_ctx.allocator};
