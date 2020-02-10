@@ -69,7 +69,7 @@ namespace nova::bf {
 
         allocator = renderer.get_global_allocator();
 
-        vertices.resize(MAX_VERTEX_BUFFER_SIZE / sizeof(NuklearVertex));
+        raw_vertices.resize(MAX_VERTEX_BUFFER_SIZE / sizeof(NuklearVertex));
         indices.resize(MAX_INDEX_BUFFER_SIZE / sizeof(uint32_t));
 
         init_nuklear();
@@ -456,21 +456,21 @@ namespace nova::bf {
 
     void NuklearDevice::setup_renderpass(CommandList& cmds, FrameContext& frame_ctx) {
         static const nk_draw_vertex_layout_element VERTEX_LAYOUT[] =
-            {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
-             {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, uv)},
-             {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct NuklearVertex, color)},
+            {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct RawNuklearVertex, position)},
+             {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct RawNuklearVertex, uv)},
+             {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct RawNuklearVertex, color)},
              {NK_VERTEX_LAYOUT_END}};
 
         const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
 
         nk_buffer_init_default(&nk_cmds);
-        nk_buffer_init_fixed(&nk_vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
+        nk_buffer_init_fixed(&nk_vertex_buffer, raw_vertices.data(), MAX_VERTEX_BUFFER_SIZE);
         nk_buffer_init_fixed(&nk_index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
 
         nk_convert_config config = {};
         config.vertex_layout = VERTEX_LAYOUT;
-        config.vertex_size = sizeof(NuklearVertex);
-        config.vertex_alignment = NK_ALIGNOF(NuklearVertex);
+        config.vertex_size = sizeof(RawNuklearVertex);
+        config.vertex_alignment = NK_ALIGNOF(RawNuklearVertex);
         config.null = null_texture->nk_null_tex;
         config.circle_segment_count = 22;
         config.curve_segment_count = 22;
@@ -485,9 +485,9 @@ namespace nova::bf {
             logger(rx::log::level::k_error, "Could not convert Nuklear UI to mesh data: %s", to_string(result));
         }
 
-        mesh->set_vertex_data(vertices.data(), vertices.size() * sizeof(NuklearVertex));
-        mesh->set_index_data(indices.data(), indices.size() * sizeof(uint16_t));
-
+        // Record the commands to upload the mesh data now, so they're before the renderpass commands in the command list
+        // However, we don't put data into the staging buffers until the `render_ui` method - but that method executes before the GPU
+        // executes the command list, so there's no out-of-order issues
         mesh->record_commands_to_upload_data(&cmds, frame_idx);
 
         const auto window_size = frame_ctx.nova->get_window().get_window_size();
@@ -582,6 +582,8 @@ namespace nova::bf {
                    MAX_NUM_TEXTURES);
         }
 
+        rx::vector<NuklearVertex> vertices{frame_ctx.allocator, raw_vertices.size()};
+
         // Record drawcalls
         nk_draw_foreach(cmd, nk_ctx.get(), &nk_cmds) {
             if(cmd->elem_count == 0) {
@@ -599,8 +601,19 @@ namespace nova::bf {
 
             cmds.draw_indexed_mesh(cmd->elem_count, offset);
 
+            // Copy data into the vector of real vertices, adding in the texture ID
+            for(uint32_t i = offset; i < offset + cmd->elem_count; i++) {
+                const auto raw_vertex = raw_vertices[i];
+                const auto tex_idx = *nk_tex_id_to_descriptor_idx.find(cmd->texture.id);
+
+                vertices[i] = NuklearVertex{raw_vertex.position, raw_vertex.uv, raw_vertex.color, tex_idx};
+            }
+
             offset += cmd->elem_count;
         }
+
+        mesh->set_vertex_data(vertices.data(), vertices.size() * sizeof(NuklearVertex));
+        mesh->set_index_data(indices.data(), indices.size() * sizeof(uint16_t));
 
         if(num_sets_used > 1) {
             logger(rx::log::level::k_info, "Used %u descriptor sets. Maybe you should only use one", num_sets_used);

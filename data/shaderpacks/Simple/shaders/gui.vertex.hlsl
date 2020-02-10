@@ -2,6 +2,7 @@ struct VsInput {
     float2 position : POSITION;
     float2 uv : TEXCOORD;
     uint color : COLOR;
+    uint texture_id : INDEX;
 };
 
 struct VsOutput {
@@ -28,7 +29,7 @@ VsOutput main(VsInput input) {
 
     output.color = input.color;
 
-    output.texture_id = 1;//input.texture_id;
+    output.texture_id = input.texture_id;
 
     return output;
 }

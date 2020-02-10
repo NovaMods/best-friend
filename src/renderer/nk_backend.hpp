@@ -37,10 +37,17 @@ namespace nova {
                              nk_draw_null_texture null_tex = {});
         };
 
+        struct RawNuklearVertex {
+            glm::vec2 position;
+            glm::vec2 uv;
+            glm::u8vec4 color;
+        };
+
         struct NuklearVertex {
             glm::vec2 position;
             glm::vec2 uv;
             glm::u8vec4 color;
+            uint32_t texture_idx;
         };
 
         enum class ImageId {
@@ -94,7 +101,7 @@ namespace nova {
             nk_buffer nk_cmds{};
 
             renderer::MapAccessor<renderer::MeshId, renderer::ProceduralMesh> mesh;
-            rx::vector<NuklearVertex> vertices;
+            rx::vector<RawNuklearVertex> raw_vertices;
             nk_buffer nk_vertex_buffer{};
             rx::vector<uint16_t> indices;
             nk_buffer nk_index_buffer{};
