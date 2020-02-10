@@ -194,7 +194,10 @@ namespace nova::bf {
     }
 
     void NuklearDevice::create_null_texture() {
-        const rx::optional<NuklearImage> null_image = create_image(NULL_TEXTURE_NAME, 8, 8, nullptr);
+        rx::vector<uint8_t> null_img_data{allocator, 8 * 8 * 4};
+        null_img_data.each_fwd([](uint8_t& elem) { elem = 0xFF; });
+
+        const rx::optional<NuklearImage> null_image = create_image(NULL_TEXTURE_NAME, 8, 8, null_img_data.data());
         if(null_image) {
             null_texture = allocator->create<NullNuklearImage>(null_image->image, null_image->nk_image);
 
@@ -237,10 +240,10 @@ namespace nova::bf {
         const void* image_data = nk_font_atlas_bake(nk_atlas, &width, &height, NK_FONT_ATLAS_RGBA32);
 
         const auto new_font_atlas = create_image_with_id(FONT_ATLAS_NAME,
-                                                            width,
-                                                            height,
-                                                            image_data,
-                                                            static_cast<uint32_t>(ImageId::FontAtlas));
+                                                         width,
+                                                         height,
+                                                         image_data,
+                                                         static_cast<uint32_t>(ImageId::FontAtlas));
         if(new_font_atlas) {
             font_image = allocator->create<NuklearImage>(new_font_atlas->image, new_font_atlas->nk_image);
 
@@ -541,6 +544,8 @@ namespace nova::bf {
         // texture descriptors before they're bound to the command list, because I don't want to figure out how to turn on update-after-bind
         // just yet
 
+        rx::map<int, uint32_t> nk_tex_id_to_descriptor_idx{frame_ctx.allocator};
+
         // Collect textures
         const nk_draw_command* cmd;
         nk_draw_foreach(cmd, nk_ctx.get(), &nk_cmds) {
@@ -551,8 +556,19 @@ namespace nova::bf {
             const int tex_index = cmd->texture.id;
             const auto* texture = textures.find(tex_index);
             if(texture != nullptr) {
-                logger(rx::log::level::k_verbose, "Nuklear texture %u is Best Friend texture %s", tex_index, (*texture)->name);
-                current_descriptor_textures.emplace_back((*texture)->image);
+                const auto img = (*texture)->image;
+                if(current_descriptor_textures.find(img) == rx::vector<Image*>::k_npos) {
+                    const auto descriptor_idx = current_descriptor_textures.size();
+                    logger(rx::log::level::k_verbose,
+                           "Inserting Nuklear texture %u (Best Friend texture %s) into descriptor array at index %u",
+                           tex_index,
+                           (*texture)->name,
+                           descriptor_idx);
+                    current_descriptor_textures.emplace_back((*texture)->image);
+                    nk_tex_id_to_descriptor_idx.insert(tex_index, descriptor_idx);
+
+                    // TODO: Figure out how to get the texture IDs into vertex data so that we can actually use them
+                }
             } else {
                 logger(rx::log::level::k_verbose, "No entry for Nuklear texture %u", tex_index);
             }

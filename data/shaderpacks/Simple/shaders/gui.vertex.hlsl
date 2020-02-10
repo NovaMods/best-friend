@@ -28,7 +28,7 @@ VsOutput main(VsInput input) {
 
     output.color = input.color;
 
-    output.texture_id = 0;//input.texture_id;
+    output.texture_id = 1;//input.texture_id;
 
     return output;
 }
