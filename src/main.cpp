@@ -46,7 +46,7 @@ int main(int argc, const char** argv) {
     // Instantiate the basic entities
     // TODO: Make something more better
     auto* train_selection_entity = new Entity;
-    train_selection_entity->add_component<TrainSelectionPanel>(nuklear_device->get_context());
+    train_selection_entity->add_component<TrainSelectionPanel>(nuklear_device->get_context().get());
     world->add_entity(train_selection_entity);
 
     const auto& window = renderer.get_window();
