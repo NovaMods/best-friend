@@ -123,12 +123,8 @@ namespace nova::bf {
         nk_input_end(nk_ctx.get());
     }
 
-    rx::optional<NuklearImage> NuklearDevice::create_image(const rx::string& name,
-                                                           const rx_size width,
-                                                           const rx_size height,
-                                                           const void* image_data) {
-        const auto idx = next_image_idx;
-        next_image_idx++;
+    rx::optional<NuklearImage> NuklearDevice::create_image_with_id(
+        const rx::string& name, const rx_size width, const rx_size height, const void* image_data, const uint32_t idx) {
 
         auto& resource_manager = renderer.get_resource_manager();
         auto image = resource_manager.create_texture(name, width, height, PixelFormat::Rgba8, image_data, allocator);
@@ -144,6 +140,16 @@ namespace nova::bf {
 
             return rx::nullopt;
         }
+    }
+
+    rx::optional<NuklearImage> NuklearDevice::create_image(const rx::string& name,
+                                                           const rx_size width,
+                                                           const rx_size height,
+                                                           const void* image_data) {
+        const auto idx = next_image_idx;
+        next_image_idx++;
+
+        return create_image_with_id(name, width, height, image_data, idx);
     }
 
     void NuklearDevice::clear_context() const { nk_clear(nk_ctx.get()); }
@@ -212,7 +218,6 @@ namespace nova::bf {
         nk_font_atlas_init_default(nk_atlas);
         nk_font_atlas_begin(nk_atlas);
 
-        // Todo: load a font
         font = nk_font_atlas_add_from_file(nk_atlas, FONT_PATH, 14, nullptr);
         if(!font) {
             logger(rx::log::level::k_error, "Could not load font %s", FONT_PATH);
@@ -231,7 +236,11 @@ namespace nova::bf {
         int width, height;
         const void* image_data = nk_font_atlas_bake(nk_atlas, &width, &height, NK_FONT_ATLAS_RGBA32);
 
-        const auto new_font_atlas = create_image(FONT_ATLAS_NAME, width, height, image_data);
+        const auto new_font_atlas = create_image_with_id(FONT_ATLAS_NAME,
+                                                            width,
+                                                            height,
+                                                            image_data,
+                                                            static_cast<uint32_t>(ImageId::FontAtlas));
         if(new_font_atlas) {
             font_image = allocator->create<NuklearImage>(new_font_atlas->image, new_font_atlas->nk_image);
 
@@ -541,20 +550,21 @@ namespace nova::bf {
 
             const int tex_index = cmd->texture.id;
             const auto* texture = textures.find(tex_index);
-            if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
+            if(texture != nullptr) {
+                logger(rx::log::level::k_verbose, "Nuklear texture %u is Best Friend texture %s", tex_index, (*texture)->name);
                 current_descriptor_textures.emplace_back((*texture)->image);
-
             } else {
-                // TODO: Remove this branch. We need to make sure that th descriptor array has enough space for all our textures, and I
-                // don't know how to do that yet
-                write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
-
-                num_sets_used++;
-                ++cur_descriptor_set;
+                logger(rx::log::level::k_verbose, "No entry for Nuklear texture %u", tex_index);
             }
         }
-
-        write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
+        if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
+            write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
+        } else {
+            logger(rx::log::level::k_error,
+                   "Using %u textures, but the maximum allowed is %u",
+                   current_descriptor_textures.size(),
+                   MAX_NUM_TEXTURES);
+        }
 
         // Record drawcalls
         nk_draw_foreach(cmd, nk_ctx.get(), &nk_cmds) {

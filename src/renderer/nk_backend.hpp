@@ -44,6 +44,7 @@ namespace nova {
         };
 
         enum class ImageId {
+            Null,
             FontAtlas,
 
             Count, // Must always be last
@@ -64,7 +65,11 @@ namespace nova {
              * \brief Begins a frame by doing things like input handling
              */
             void consume_input();
-
+            rx::optional<NuklearImage> create_image_with_id(const rx::string& name,
+                                                               rx_size width,
+                                                               rx_size height,
+                                                               const void* image_data,
+                                                               uint32_t idx);
             [[nodiscard]] rx::optional<NuklearImage> create_image(const rx::string& name,
                                                                   rx_size width,
                                                                   rx_size height,

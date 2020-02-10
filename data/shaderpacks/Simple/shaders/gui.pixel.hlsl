@@ -18,6 +18,6 @@ float4 main(VsOutput input) : SV_Target {
     uint alpha = input.color & 0xFF;
     float4 vertex_color = float4(red, green, blue, alpha) / 255.0f;
 
-    // float4 texture_color = ui_textures[input.texture_id].Sample(ui_sampler, input.uv);
-    return vertex_color;// * texture_color;
+    float4 texture_color = ui_textures[input.texture_id].Sample(ui_sampler, input.uv);
+    return vertex_color * texture_color;
 }
