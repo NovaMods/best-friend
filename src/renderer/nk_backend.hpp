@@ -78,7 +78,7 @@ namespace nova {
                                               const rx::vector<renderer::rhi::Image*>& current_descriptor_textures);
 
         private:
-            std::shared_ptr<nk_context> ctx;
+            std::shared_ptr<nk_context> nk_ctx;
 
             renderer::NovaRenderer& renderer;
 
