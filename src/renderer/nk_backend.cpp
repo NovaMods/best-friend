@@ -219,12 +219,15 @@ namespace nova::bf {
         font = nk_font_atlas_add_from_file(nk_atlas, FONT_PATH, 14, nullptr);
         if(!font) {
             logger(rx::log::level::k_error, "Could not load font %s", FONT_PATH);
+            return;
         }
 
         retrieve_font_atlas();
 
         nk_font_atlas_end(nk_atlas, nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &null_texture->nk_null_tex);
         nk_style_set_font(nk_ctx.get(), &font->handle);
+
+        logger(rx::log::level::k_verbose, "Loaded font %s", FONT_PATH);
     }
 
     void NuklearDevice::retrieve_font_atlas() {
