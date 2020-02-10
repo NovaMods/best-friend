@@ -94,7 +94,7 @@ namespace nova {
             rx::vector<uint16_t> indices;
             nk_buffer nk_index_buffer{};
 
-            std::mutex key_buffer_mutex;
+            rx::concurrency::mutex key_buffer_mutex;
 
             /*!
              * \brief Vector of all the keys we received this frame and if they were pressed down or not
@@ -119,8 +119,8 @@ namespace nova {
             uint32_t next_image_idx = 0;
 
             nk_font_atlas* nk_atlas;
-            std::unique_ptr<NullNuklearImage> null_texture;
-            std::unique_ptr<NuklearImage> font_image;
+            NullNuklearImage* null_texture;
+            NuklearImage* font_image;
             nk_font* font{};
 
             rx::memory::allocator* allocator;

@@ -89,6 +89,8 @@ namespace nova::bf {
         nk_buffer_free(&nk_cmds);
         nk_clear(nk_ctx.get());
 
+        allocator->destroy<NuklearImage>(font_image);
+        allocator->destroy<NullNuklearImage>(null_texture);
         allocator->destroy<nk_font_atlas>(nk_atlas);
     }
 
@@ -177,11 +179,6 @@ namespace nova::bf {
     void NuklearDevice::init_nuklear() {
         nk_ctx = std::make_shared<nk_context>();
         nk_init_default(nk_ctx.get(), nullptr);
-
-        nk_buffer_init_default(&nk_cmds);
-
-        nk_buffer_init_fixed(&nk_vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
-        nk_buffer_init_fixed(&nk_index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
     }
 
     void NuklearDevice::create_resources() {
@@ -193,7 +190,7 @@ namespace nova::bf {
     void NuklearDevice::create_null_texture() {
         const rx::optional<NuklearImage> null_image = create_image(NULL_TEXTURE_NAME, 8, 8, nullptr);
         if(null_image) {
-            null_texture = std::make_unique<NullNuklearImage>(null_image->image, null_image->nk_image);
+            null_texture = allocator->create<NullNuklearImage>(null_image->image, null_image->nk_image);
 
         } else {
             logger(rx::log::level::k_error, "Could not create null texture");
@@ -236,7 +233,7 @@ namespace nova::bf {
 
         const auto new_font_atlas = create_image(FONT_ATLAS_NAME, width, height, image_data);
         if(new_font_atlas) {
-            font_image = std::make_unique<NuklearImage>(new_font_atlas->image, new_font_atlas->nk_image);
+            font_image = allocator->create<NuklearImage>(new_font_atlas->image, new_font_atlas->nk_image);
 
         } else {
             logger(rx::log::level::k_error, "Could not create font atlas texture");
@@ -246,7 +243,7 @@ namespace nova::bf {
     void NuklearDevice::register_input_callbacks() {
         auto& window = renderer.get_window();
         window.register_key_callback([&](const auto& key, const bool is_press, const bool is_control_down, const bool /* is_shift_down */) {
-            std::lock_guard l(key_buffer_mutex);
+            rx::concurrency::scope_lock l(key_buffer_mutex);
             // ReSharper disable once CppDefaultCaseNotHandledInSwitchStatement
             switch(key) {
                 case GLFW_KEY_DELETE:
@@ -407,6 +404,44 @@ namespace nova::bf {
         device.update_descriptor_sets(writes);
     }
 
+    rx::string to_string(const nk_flags flags) {
+        // This performs all the allocations :(
+        // Real string builder when
+        rx::string str;
+
+        if((flags & NK_CONVERT_INVALID_PARAM) != 0) {
+            return "NK_CONVERT_INVALID_PARAM";
+        }
+
+        if((flags & NK_CONVERT_COMMAND_BUFFER_FULL) != 0) {
+            str.append("NK_CONVERT_COMMAND_BUFFER_FULL");
+        }
+
+        if((flags & NK_CONVERT_VERTEX_BUFFER_FULL) != 0) {
+            if(!str.is_empty()) {
+                str.append(" | ");
+            }
+            str.append("NK_CONVERT_VERTEX_BUFFER_FULL");
+        }
+
+        if((flags & NK_CONVERT_ELEMENT_BUFFER_FULL) != 0) {
+            if(!str.is_empty()) {
+                str.append(" | ");
+            }
+            str.append("NK_CONVERT_ELEMENT_BUFFER_FULL");
+        }
+
+        return str;
+    }
+
+    rx::string to_string(const nk_buffer& buffer) {
+        return rx::string::format("{grow_factor=%f allocated=%u needed=%u size=%u}",
+                                  buffer.grow_factor,
+                                  buffer.allocated,
+                                  buffer.needed,
+                                  buffer.size);
+    }
+
     void NuklearDevice::setup_renderpass(CommandList& cmds, FrameContext& frame_ctx) {
         static const nk_draw_vertex_layout_element VERTEX_LAYOUT[] =
             {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct NuklearVertex, position)},
@@ -415,6 +450,10 @@ namespace nova::bf {
              {NK_VERTEX_LAYOUT_END}};
 
         const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
+
+        nk_buffer_init_default(&nk_cmds);
+        nk_buffer_init_fixed(&nk_vertex_buffer, vertices.data(), MAX_VERTEX_BUFFER_SIZE);
+        nk_buffer_init_fixed(&nk_index_buffer, indices.data(), MAX_INDEX_BUFFER_SIZE);
 
         nk_convert_config config = {};
         config.vertex_layout = VERTEX_LAYOUT;
@@ -429,7 +468,10 @@ namespace nova::bf {
         config.line_AA = NK_ANTI_ALIASING_ON;
 
         // vertex_buffer and index_buffer let Nuklear write vertex information directly
-        nk_convert(nk_ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
+        const auto result = nk_convert(nk_ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
+        if(result != NK_CONVERT_SUCCESS) {
+            logger(rx::log::level::k_error, "Could not convert Nuklear UI to mesh data: %s", to_string(result));
+        }
 
         mesh->set_vertex_data(vertices.data(), vertices.size() * sizeof(NuklearVertex));
         mesh->set_index_data(indices.data(), indices.size() * sizeof(uint16_t));
@@ -487,14 +529,12 @@ namespace nova::bf {
         uint32_t offset = 0;
 
         // Two passes through the draw commands: one to collect the textures we'll need, one to issue the drawcalls. This lets us update the
-        // texture descriptors before they're bound to the command list, because apparently my 1080 doesn't support update-after-bind :<
-
-        uint32_t cur_cmd_idx = 0;
+        // texture descriptors before they're bound to the command list, because I don't want to figure out how to turn on update-after-bind
+        // just yet
 
         // Collect textures
-        for(const nk_draw_command* cmd = nk__draw_begin(nk_ctx.get(), &nk_cmds); cmd != nullptr;
-            cmd = nk__draw_next(cmd, &nk_cmds, nk_ctx.get())) {
-
+        const nk_draw_command* cmd;
+        nk_draw_foreach(cmd, nk_ctx.get(), &nk_cmds) {
             if(cmd->elem_count == 0) {
                 continue;
             }
@@ -512,16 +552,12 @@ namespace nova::bf {
                 num_sets_used++;
                 ++cur_descriptor_set;
             }
-            cur_cmd_idx++;
         }
 
         write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
 
-        cur_cmd_idx = 0;
-
         // Record drawcalls
-        for(const nk_draw_command* cmd = nk__draw_begin(nk_ctx.get(), &nk_cmds); cmd != nullptr;
-            cmd = nk__draw_next(cmd, &nk_cmds, nk_ctx.get())) {
+        nk_draw_foreach(cmd, nk_ctx.get(), &nk_cmds) {
             if(cmd->elem_count == 0) {
                 continue;
             }
