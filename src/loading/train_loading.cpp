@@ -33,11 +33,24 @@ namespace nova::bf {
         }
     }
 
-    void load_train_mesh(const rx::string& train_file_path) {
+    bool has_real_errors(const bve::CVector<bve::Mesh_Error>& potential_errors) {
+        for(uint32_t i = 0; i < potential_errors.count; i++) {
+            const auto& potential_error = potential_errors.ptr[i];
+            if(potential_error.kind.tag == bve::Mesh_Error_Kind::Tag::UTF8 ||
+               potential_error.kind.tag == bve::Mesh_Error_Kind::Tag::OutOfBounds ||
+               potential_error.kind.tag == bve::Mesh_Error_Kind::Tag::GenericCSV ||
+               potential_error.kind.tag == bve::Mesh_Error_Kind::Tag::UnknownCSV) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    rx::optional<bve::Parsed_Static_Object> load_train_mesh(const rx::string& train_file_path) {
         if(const auto data = rx::filesystem::read_text_file(train_file_path)) {
             rx::string file_contents{reinterpret_cast<const char*>(data->data())};
             const auto train = bve_parse_mesh_from_string(file_contents.data(), bve::Mesh_File_Type::B3D);
-            if(train.errors.count > 0) {
+            if(has_real_errors(train.errors)) {
                 rx::string errors;
                 for(uint32_t i = 0; i < train.errors.count; i++) {
                     errors.append(to_string(train.errors.ptr[i]));
@@ -48,13 +61,17 @@ namespace nova::bf {
 
                 logger(rx::log::level::k_error, "Could not load train %s: %s", train_file_path, errors);
 
+                return rx::nullopt;
+
             } else {
                 logger(rx::log::level::k_info, "Successfully loaded train %s", train_file_path);
-            }
 
-            bve_delete_parsed_static_object(train);
+                return train;
+            }
         } else {
             logger(rx::log::level::k_error, "Could not read train file %s", train_file_path);
+
+            return rx::nullopt;
         }
     }
 } // namespace nova::bf
