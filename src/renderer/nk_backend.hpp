@@ -107,15 +107,15 @@ namespace nova {
             nk_buffer nk_index_buffer{};
 
             rx::concurrency::mutex key_buffer_mutex;
+            rx::concurrency::mutex mouse_button_buffer_mutex;
 
             /*!
              * \brief Vector of all the keys we received this frame and if they were pressed down or not
              */
             rx::vector<std::pair<nk_keys, bool>> keys;
+            rx::vector<std::pair<nk_buttons, bool>> mouse_buttons;
 
             glm::dvec2 most_recent_mouse_position{};
-
-            rx::optional<std::pair<nk_buttons, bool>> most_recent_mouse_button;
 
             renderer::rhi::DescriptorPool* pool = nullptr;
 

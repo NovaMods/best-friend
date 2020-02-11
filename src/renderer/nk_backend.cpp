@@ -103,21 +103,26 @@ namespace nova::bf {
         // TODO: Scrolling of some sort
 
         // Consume keyboard input
-        keys.each_fwd([&](const std::pair<nk_keys, bool>& pair) { nk_input_key(nk_ctx.get(), pair.first, pair.second); });
+        {
+            rx::concurrency::scope_lock l(key_buffer_mutex);
+            keys.each_fwd([&](const std::pair<nk_keys, bool>& pair) { nk_input_key(nk_ctx.get(), pair.first, pair.second); });
+            keys.clear();
+        }
 
-        keys.clear();
+        {
+            rx::concurrency::scope_lock l(mouse_button_buffer_mutex);
+            // Update NK with the current mouse position
+            nk_input_motion(nk_ctx.get(), static_cast<int>(most_recent_mouse_position.x), static_cast<int>(most_recent_mouse_position.y));
 
-        // Update NK with the current mouse position
-        nk_input_motion(nk_ctx.get(), static_cast<int>(most_recent_mouse_position.x), static_cast<int>(most_recent_mouse_position.y));
-
-        // Consume the most recent mouse button
-        if(most_recent_mouse_button) {
-            nk_input_button(nk_ctx.get(),
-                            most_recent_mouse_button->first,
-                            static_cast<int>(most_recent_mouse_position.x),
-                            static_cast<int>(most_recent_mouse_position.y),
-                            most_recent_mouse_button->second);
-            most_recent_mouse_button = rx::optional<std::pair<nk_buttons, bool>>{};
+            // Consume the most recent mouse button
+            mouse_buttons.each_fwd([&](const std::pair<nk_buttons, bool>& mouse_event) {
+                nk_input_button(nk_ctx.get(),
+                                mouse_event.first,
+                                static_cast<int>(most_recent_mouse_position.x),
+                                static_cast<int>(most_recent_mouse_position.y),
+                                mouse_event.second);
+            });
+            mouse_buttons.clear();
         }
 
         nk_input_end(nk_ctx.get());
@@ -365,7 +370,8 @@ namespace nova::bf {
         });
 
         window.register_mouse_button_callback([&](const uint32_t button, const bool is_press) {
-            most_recent_mouse_button = std::pair<nk_buttons, bool>{to_nk_mouse_button(button), is_press};
+            rx::concurrency::scope_lock l(mouse_button_buffer_mutex);
+            mouse_buttons.emplace_back(to_nk_mouse_button(button), is_press);
         });
     }
 
@@ -613,6 +619,8 @@ namespace nova::bf {
         }
 
         clear_context();
+
+        consume_input();
     }
 
     nk_buttons to_nk_mouse_button(const uint32_t button) {
