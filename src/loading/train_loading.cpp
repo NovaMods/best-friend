@@ -4,6 +4,7 @@
 #include <rx/core/log.h>
 #include <rx/core/string.h>
 
+#include "rx/core/filesystem/file.h"
 RX_LOG("TrainLoad", logger);
 
 namespace nova::bf {
@@ -33,22 +34,27 @@ namespace nova::bf {
     }
 
     void load_train_mesh(const rx::string& train_file_path) {
-        const auto train = bve_parse_mesh_from_string(train_file_path.data(), bve::Mesh_File_Type::B3D);
-        if(train.errors.count > 0) {
-            rx::string errors;
-            for(uint32_t i = 0; i < train.errors.count; i++) {
-                errors.append(to_string(train.errors.ptr[i]));
-                if(i < train.errors.count - 1) {
-                    errors.append(", ");
+        if(const auto data = rx::filesystem::read_text_file(train_file_path)) {
+            rx::string file_contents{reinterpret_cast<const char*>(data->data())};
+            const auto train = bve_parse_mesh_from_string(file_contents.data(), bve::Mesh_File_Type::B3D);
+            if(train.errors.count > 0) {
+                rx::string errors;
+                for(uint32_t i = 0; i < train.errors.count; i++) {
+                    errors.append(to_string(train.errors.ptr[i]));
+                    if(i < train.errors.count - 1) {
+                        errors.append(", ");
+                    }
                 }
+
+                logger(rx::log::level::k_error, "Could not load train %s: %s", train_file_path, errors);
+
+            } else {
+                logger(rx::log::level::k_info, "Successfully loaded train %s", train_file_path);
             }
 
-            logger(rx::log::level::k_error, "Could not load train %s: %s", train_file_path, errors);
-
+            bve_delete_parsed_static_object(train);
         } else {
-            logger(rx::log::level::k_info, "Successfully loaded train %s", train_file_path);
+            logger(rx::log::level::k_error, "Could not read train file %s", train_file_path);
         }
-
-        bve_delete_parsed_static_object(train);
     }
 } // namespace nova::bf
