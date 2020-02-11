@@ -19,10 +19,10 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nova-renderer)
 
 
 # TODO: Figure out how to invoke cargo and place things in the right place and everything
-# list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake-cargo/cmake)
-# include(Cargo)
+# 
+# Commands I need to run:
+# cargo run --bin bve-build
 
-# add_crate(${CMAKE_CURRENT_LIST_DIR}/bve-reborn/bve-native/Cargo.toml)
 include_directories(SYSTEM ${CMAKE_CURRENT_LIST_DIR}/bve-reborn/bve-native/include)
 
 # N U K L E A R

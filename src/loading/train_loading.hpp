@@ -1,7 +1,9 @@
 #pragma once
 
-#include "nova_renderer/util/filesystem.hpp"
+namespace rx {
+    struct string;
+}
 
 namespace nova::bf {
-    void load_train_mesh(const fs::path& train_file_path);
+    void load_train_mesh(const rx::string& train_file_path);
 }

@@ -1,3 +1,4 @@
+#include <bve.hpp>
 #include <nova_renderer/nova_renderer.hpp>
 
 #include "ec/entity.hpp"
@@ -28,6 +29,9 @@ int main(int argc, const char** argv) {
     settings.window.height = 480;
 
     VirtualFilesystem::get_instance()->add_resource_root(BEST_FRIEND_DATA_DIR);
+
+    // TODO: Set BVE panic handlers and whatnot
+    bve::bve_init();
 
     NovaRenderer renderer(settings);
 
