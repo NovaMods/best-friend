@@ -36,3 +36,7 @@ add_compile_definitions(
 	NK_INCLUDE_DEFAULT_FONT 
 	NK_KEYSTATE_BASED_INPUT)
 include_directories(SYSTEM ${CMAKE_CURRENT_LIST_DIR}/Nuklear)
+
+# EnTT
+set(USE_LIBCPP OFF CACHE BOOL "" FORCE)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/entt)
