@@ -1,9 +1,7 @@
 #include "ui_events.hpp"
 
+#include "../util/constants.hpp"
+
 namespace nova::bf {
-    UiEventBus UiEventBus::instance;
-
-    UiEventBus& UiEventBus::get_instance() { return instance; }
-
-    entt::dispatcher& UiEventBus::get_dispatcher() { return event_dispatcher; }
+    RX_GLOBAL<entt::dispatcher> ui_event_bus{BEST_FRIEND_GLOBALS_GROUP, "UiEventBus"};
 } // namespace nova::bf

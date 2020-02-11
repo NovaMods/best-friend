@@ -12,4 +12,6 @@ namespace nova::bf {
     constexpr const char* NULL_TEXTURE_NAME = "BestFriendNull";
 
     constexpr const char* SHADERS_PATH = "shaderpacks/Simple/shaders";
+
+    constexpr const char* BEST_FRIEND_GLOBALS_GROUP = "BestFriend";
 } // namespace nova::bf
