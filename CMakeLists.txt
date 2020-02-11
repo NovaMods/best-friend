@@ -48,6 +48,8 @@ set(
     src/ui/panel.cpp
     src/ui/train_selection_panel.hpp
     src/ui/train_selection_panel.cpp
+    src/ui/ui_events.hpp
+    src/ui/ui_events.cpp
 
 	src/loading/train_loading.hpp
 	src/loading/train_loading.cpp

@@ -3,7 +3,7 @@
 #include <rx/core/log.h>
 
 #include "../loading/train_loading.hpp"
-
+#include "ui_events.hpp"
 RX_LOG("TrainPanel", logger);
 
 namespace nova::bf {
@@ -33,8 +33,9 @@ namespace nova::bf {
 
             if(nk_button_label(ctx, "Choose train file")) {
                 logger(rx::log::level::k_verbose, "Clicked choose train button");
-                // TODO: Post a LoadTrainCommand or something to somewhere
-                load_train_mesh(BEST_FRIEND_DATA_DIR "/trains/R46 2014 (8 Car)/Cars/Body/BodyA.b3d");
+
+                last_loaded_train = BEST_FRIEND_DATA_DIR "/trains/R46 2014 (8 Car)/Cars/Body/BodyA.b3d";
+                UiEventBus::get_instance().get_dispatcher().trigger<LoadTrainEvent>(last_loaded_train);
             }
         }
         nk_end(ctx);
