@@ -64,8 +64,10 @@ int main(int argc, const char** argv) {
         frame_start_time = static_cast<double>(clock());
 
         if(frame_counter % 100 == 0) {
-            logger(rx::log::level::k_info, "Frame %u took %ums", frame_counter, last_frame_duration);
+            logger(rx::log::level::k_info, "Frame %u took %fms", frame_counter, last_frame_duration * 1000);
         }
+
+        window.poll_input();
 
         world->tick(last_frame_duration);
 

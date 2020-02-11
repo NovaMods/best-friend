@@ -534,9 +534,6 @@ namespace nova::bf {
         current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
         current_descriptor_textures.push_back(null_texture->image->image);
 
-        // Iterator to the descriptor set to write the current textures to
-        auto cur_descriptor_set = 0;
-
         uint32_t num_sets_used = 0;
         uint32_t offset = 0;
 
@@ -559,11 +556,6 @@ namespace nova::bf {
                 const auto img = (*texture)->image;
                 if(current_descriptor_textures.find(img) == rx::vector<Image*>::k_npos) {
                     const auto descriptor_idx = current_descriptor_textures.size();
-                    logger(rx::log::level::k_verbose,
-                           "Inserting Nuklear texture %u (Best Friend texture %s) into descriptor array at index %u",
-                           tex_index,
-                           (*texture)->name,
-                           descriptor_idx);
                     current_descriptor_textures.emplace_back((*texture)->image);
                     nk_tex_id_to_descriptor_idx.insert(tex_index, descriptor_idx);
 
@@ -573,8 +565,9 @@ namespace nova::bf {
                 logger(rx::log::level::k_verbose, "No entry for Nuklear texture %u", tex_index);
             }
         }
-        if(current_descriptor_textures.size() < MAX_NUM_TEXTURES) {
+        if(current_descriptor_textures.size() <= MAX_NUM_TEXTURES) {
             write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
+
         } else {
             logger(rx::log::level::k_error,
                    "Using %u textures, but the maximum allowed is %u",

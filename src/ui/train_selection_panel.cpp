@@ -1,5 +1,9 @@
 #include "train_selection_panel.hpp"
 
+#include <rx/core/log.h>
+
+RX_LOG("TrainPanel", logger);
+
 namespace nova::bf {
     TrainSelectionPanel::TrainSelectionPanel(ec::Entity* owner, nk_context* ctx) : Panel(owner), ctx(ctx) {}
 
@@ -36,12 +40,12 @@ namespace nova::bf {
                     NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE | NK_WINDOW_CLOSABLE)) {
 
             // fixed widget pixel width
-            nk_layout_row_static(ctx, 0, 400, 1);
+            nk_layout_row_dynamic(ctx, 0, 1);
 
             nk_label(ctx, selected_train_label.data(), NK_TEXT_LEFT);
 
             if(nk_button_label(ctx, "Choose train file")) {
-                // event handling
+                logger(rx::log::level::k_verbose, "Clicked choose train button");
             }
         }
         nk_end(ctx);
