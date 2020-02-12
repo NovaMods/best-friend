@@ -8,6 +8,7 @@
 #include "rx/core/filesystem/file.h"
 #include "rx/core/profiler.h"
 #include "minitrace.h"
+#include "bve_wrapper.hpp"
 RX_LOG("TrainLoad", logger);
 
 namespace nova::bf {
@@ -64,7 +65,7 @@ namespace nova::bf {
 
             const auto train = [&] {
                 MTR_SCOPE("load_train_mesh", "BVE");
-                return bve_parse_mesh_from_string(file_contents.data(), bve::Mesh_File_Type::B3D);
+                return g_bve->parse_mesh_from_string(file_contents.data(), bve::Mesh_File_Type::B3D);
             }();
 
             if(has_real_errors(train.errors)) {

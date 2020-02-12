@@ -13,5 +13,5 @@ namespace nova::bf {
      *
      * There's one dispatcher. You and your friends can register events subscribers, me and my friends can post events, it's totally great
      */
-    extern RX_GLOBAL<entt::dispatcher> ui_event_bus;
+    extern RX_GLOBAL<entt::dispatcher> g_ui_event_bus;
 } // namespace nova::bf

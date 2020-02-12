@@ -55,6 +55,8 @@ set(
 	src/loading/train_loading.cpp
 	src/loading/data_loader.hpp
 	src/loading/data_loader.cpp
+	src/loading/bve_wrapper.hpp
+	src/loading/bve_wrapper.cpp
 	
     src/renderer/nk_backend.hpp
     src/renderer/nk_backend.cpp
