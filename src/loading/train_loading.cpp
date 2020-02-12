@@ -56,7 +56,7 @@ namespace nova::bf {
             return rx::filesystem::read_text_file(train_file_path);
         }();
         
-        if(const auto data = rx::filesystem::read_text_file(train_file_path)) {
+        if(data) {
             rx::string file_contents = [&] {
                 MTR_SCOPE("load_train_mesh", "VectorToString");
                 return rx::string{reinterpret_cast<const char*>(data->data())};
