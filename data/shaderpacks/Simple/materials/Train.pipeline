@@ -1,0 +1,9 @@
+{
+    "name": "Train",
+    "pass": "Forward",
+
+    "primitiveMode": "Triangles",
+
+    "vertexShader": "shaders/train.vertex.hlsl",
+    "fragmentShader": "shaders/train.pixel.hlsl"
+}

@@ -1,0 +1,10 @@
+{
+    "name": "Train",
+    "filter": "geometry_type::block AND not_transparent",
+    "passes": [
+        {
+            "name": "main",
+            "pipeline": "Train"
+        }
+    ]
+}

@@ -2,10 +2,10 @@
 #include <nova_renderer/nova_renderer.hpp>
 
 #include "ec/entity.hpp"
+#include "loading/data_loader.hpp"
 #include "renderer/nk_backend.hpp"
 #include "ui/train_selection_panel.hpp"
 #include "world/world.hpp"
-
 using namespace nova;
 using namespace bf;
 using namespace renderer;
@@ -46,6 +46,8 @@ int main(int argc, const char** argv) {
     renderer.set_ui_renderpass(nuklear_device, NuklearDevice::get_create_info());
 
     renderer.load_renderpack("Simple");
+
+    DataLoader loader{*world, renderer};
 
     // Instantiate the basic entities
     // TODO: Make something more better

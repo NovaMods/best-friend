@@ -53,6 +53,8 @@ set(
 
 	src/loading/train_loading.hpp
 	src/loading/train_loading.cpp
+	src/loading/data_loader.hpp
+	src/loading/data_loader.cpp
 	
     src/renderer/nk_backend.hpp
     src/renderer/nk_backend.cpp
