@@ -3,8 +3,10 @@
 #include <bve.hpp>
 #include <rx/core/log.h>
 #include <rx/core/string.h>
+#include <time.h>
 
 #include "rx/core/filesystem/file.h"
+#include "rx/core/profiler.h"
 RX_LOG("TrainLoad", logger);
 
 namespace nova::bf {
@@ -47,6 +49,7 @@ namespace nova::bf {
     }
 
     rx::optional<bve::Parsed_Static_Object> load_train_mesh(const rx::string& train_file_path) {
+        const auto start_time = static_cast<double>(clock());
         if(const auto data = rx::filesystem::read_text_file(train_file_path)) {
             rx::string file_contents{reinterpret_cast<const char*>(data->data())};
             const auto train = bve_parse_mesh_from_string(file_contents.data(), bve::Mesh_File_Type::B3D);
@@ -64,7 +67,11 @@ namespace nova::bf {
                 return rx::nullopt;
 
             } else {
-                logger(rx::log::level::k_info, "Successfully loaded train %s", train_file_path);
+                const auto end_time = static_cast<double>(clock());
+                const auto load_duration = (end_time - start_time) * 1000.0 / CLOCKS_PER_SEC;
+
+                logger(rx::log::level::k_info, "Successfully loaded train %s in %fms", train_file_path, load_duration);
+
 
                 return train;
             }

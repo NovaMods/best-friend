@@ -5,7 +5,7 @@ struct VsInput {
     uint uv : TEXCOORD;
     uint secondary_uv: TEXCOORD2;
     uint texture_id : INDEX;
-    uint4 data : DATA;
+    float4 data : DATA;
 };
 
 struct VsOutput {

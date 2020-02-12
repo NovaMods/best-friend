@@ -7,6 +7,7 @@
 #include "../ui/ui_events.hpp"
 #include "../world/world.hpp"
 #include "train_loading.hpp"
+#include "rx/core/profiler.h"
 
 namespace nova::bf {
     RX_LOG("DataLoader", logger);
@@ -20,7 +21,9 @@ namespace nova::bf {
     }
 
     void DataLoader::load_train(const LoadTrainEvent& event) {
-        const renderer::FullMaterialPassName pass_name{"Train", "Forward"};
+        rx::profiler::cpu_sample load_mesh_sample{"LoadMesh"};
+
+        const renderer::FullMaterialPassName pass_name{"Train", "main"};
 
         const auto train = load_train_mesh(event.filepath);
         if(train) {
@@ -31,6 +34,7 @@ namespace nova::bf {
             const auto train_meshes = train->meshes;
 
             for(uint32_t i = 0; i < train_meshes.count; i++) {
+                rx::profiler::cpu_sample upload_mesh_sample{rx::string::format("UploadMeshPart%u", i).data()};
                 const auto train_mesh = train_meshes.ptr[i];
 
                 logger(rx::log::level::k_verbose,
@@ -56,6 +60,7 @@ namespace nova::bf {
 
                 renderer::StaticMeshRenderableData renderable_data{};
                 renderable_data.mesh = mesh;
+                renderable_data.initial_scale = {0.01};
 
                 const auto renderable = renderer.add_renderable_for_material(pass_name, renderable_data);
                 logger(rx::log::level::k_verbose, "Added renderable %u", renderable);

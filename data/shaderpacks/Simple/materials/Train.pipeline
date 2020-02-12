@@ -1,6 +1,11 @@
 {
     "name": "Train",
     "pass": "Forward",
+    "states": [
+        "DisableDepthTest",
+        "DisableDepthWrite",
+        "DisableCulling"
+    ],
 
     "primitiveMode": "Triangles",
 
