@@ -7,6 +7,7 @@
 
 #include "rx/core/filesystem/file.h"
 #include "rx/core/profiler.h"
+#include "minitrace.h"
 RX_LOG("TrainLoad", logger);
 
 namespace nova::bf {
@@ -49,10 +50,23 @@ namespace nova::bf {
     }
 
     rx::optional<bve::Parsed_Static_Object> load_train_mesh(const rx::string& train_file_path) {
-        const auto start_time = static_cast<double>(clock());
+        MTR_SCOPE("load_train_mesh", "All");
+        const auto data = [&] {
+            MTR_SCOPE("load_train_mesh", "ReadFile");
+            return rx::filesystem::read_text_file(train_file_path);
+        }();
+        
         if(const auto data = rx::filesystem::read_text_file(train_file_path)) {
-            rx::string file_contents{reinterpret_cast<const char*>(data->data())};
-            const auto train = bve_parse_mesh_from_string(file_contents.data(), bve::Mesh_File_Type::B3D);
+            rx::string file_contents = [&] {
+                MTR_SCOPE("load_train_mesh", "VectorToString");
+                return rx::string{reinterpret_cast<const char*>(data->data())};
+            }();
+
+            const auto train = [&] {
+                MTR_SCOPE("load_train_mesh", "BVE");
+                return bve_parse_mesh_from_string(file_contents.data(), bve::Mesh_File_Type::B3D);
+            }();
+
             if(has_real_errors(train.errors)) {
                 rx::string errors;
                 for(uint32_t i = 0; i < train.errors.count; i++) {
@@ -67,11 +81,7 @@ namespace nova::bf {
                 return rx::nullopt;
 
             } else {
-                const auto end_time = static_cast<double>(clock());
-                const auto load_duration = (end_time - start_time) * 1000.0 / CLOCKS_PER_SEC;
-
-                logger(rx::log::level::k_info, "Successfully loaded train %s in %fms", train_file_path, load_duration);
-
+                logger(rx::log::level::k_info, "Successfully loaded train %s", train_file_path);
 
                 return train;
             }
