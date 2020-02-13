@@ -52,16 +52,18 @@ namespace nova::bf {
 
     rx::optional<bve::Parsed_Static_Object> load_train_mesh(const rx::string& train_file_path) {
         MTR_SCOPE("load_train_mesh", "All");
-        const auto data = [&] {
+        const auto train_file_string = [&] {
             MTR_SCOPE("load_train_mesh", "ReadFile");
-            return rx::filesystem::read_text_file(train_file_path);
+            return g_bve->read_file_and_convert_to_utf8(train_file_path.data());
         }();
         
-        if(data) {
+        if(train_file_string) {
             rx::string file_contents = [&] {
                 MTR_SCOPE("load_train_mesh", "VectorToString");
-                return rx::string{reinterpret_cast<const char*>(data->data())};
+                return rx::string{reinterpret_cast<const char*>(train_file_string)};
             }();
+
+            g_bve->delete_string(train_file_string);
 
             const auto train = [&] {
                 MTR_SCOPE("load_train_mesh", "BVE");
