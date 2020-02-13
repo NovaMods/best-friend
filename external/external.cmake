@@ -17,12 +17,9 @@ endif()
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/nova-renderer)
 
+# BVE Reborn
 
-# TODO: Figure out how to invoke cargo and place things in the right place and everything
-# 
-# Commands I need to run:
-# cargo run --bin bve-build
-
+# TODO: Figure out how to build BVE Reborn
 include_directories(SYSTEM ${CMAKE_CURRENT_LIST_DIR}/bve-reborn/bve-native/include)
 
 # N U K L E A R

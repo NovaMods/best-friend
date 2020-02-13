@@ -13,6 +13,10 @@ namespace nova::bf {
 
     void BveWrapper::set_panic_handler(const PanicHandler& handler) { bve_set_panic_handler(handler); }
 
+    char* BveWrapper::read_file_and_convert_to_utf8(const char* filename) {
+        return bve_filesystem_read_convert_utf8(filename);
+    }
+
     Parsed_Static_Object BveWrapper::parse_mesh_from_string(const char* string, const Mesh_File_Type file_type) {
         return bve_parse_mesh_from_string(string, file_type);
     }

@@ -12,6 +12,8 @@ namespace nova::bf {
 
         void set_panic_handler(const bve::PanicHandler& handler);
 
+        [[nodiscard]] char* read_file_and_convert_to_utf8(const char* filename);
+
         [[nodiscard]] bve::Parsed_Static_Object parse_mesh_from_string(const char* string, bve::Mesh_File_Type file_type);
 
         void delete_parsed_static_object(bve::Parsed_Static_Object&& object);
