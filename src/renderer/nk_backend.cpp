@@ -57,7 +57,7 @@ namespace nova::bf {
     NuklearImage::NuklearImage(TextureResourceAccessor image, const struct nk_image nk_image)
         : image(rx::utility::move(image)), nk_image(nk_image) {}
 
-    NullNuklearImage::NullNuklearImage(const TextureResourceAccessor& image,
+    DefaultNuklearImage::DefaultNuklearImage(const TextureResourceAccessor& image,
                                        const struct nk_image nk_image,
                                        const nk_draw_null_texture null_tex)
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
@@ -90,7 +90,7 @@ namespace nova::bf {
         nk_clear(nk_ctx.get());
 
         allocator->destroy<NuklearImage>(font_image);
-        allocator->destroy<NullNuklearImage>(null_texture);
+        allocator->destroy<DefaultNuklearImage>(default_texture);
         allocator->destroy<nk_font_atlas>(nk_atlas);
     }
 
@@ -191,18 +191,18 @@ namespace nova::bf {
     }
 
     void NuklearDevice::create_resources() {
-        create_null_texture();
+        create_default_texture();
 
         create_ui_ubo();
     }
 
-    void NuklearDevice::create_null_texture() {
-        rx::vector<uint8_t> null_img_data{allocator, 8 * 8 * 4};
-        null_img_data.each_fwd([](uint8_t& elem) { elem = 0xFF; });
+    void NuklearDevice::create_default_texture() {
+        rx::vector<uint8_t> default_img_data{allocator, 8 * 8 * 4};
+        default_img_data.each_fwd([](uint8_t& elem) { elem = 0xFF; }); // Set the whole texture to white
 
-        const rx::optional<NuklearImage> null_image = create_image(NULL_TEXTURE_NAME, 8, 8, null_img_data.data());
-        if(null_image) {
-            null_texture = allocator->create<NullNuklearImage>(null_image->image, null_image->nk_image);
+        const rx::optional<NuklearImage> default_image = create_image(DEFAULT_TEXTURE_NAME, 8, 8, default_img_data.data());
+        if(default_image) {
+            default_texture = allocator->create<DefaultNuklearImage>(default_image->image, default_image->nk_image);
 
         } else {
             logger(rx::log::level::k_error, "Could not create null texture");
@@ -232,7 +232,7 @@ namespace nova::bf {
 
         retrieve_font_atlas();
 
-        nk_font_atlas_end(nk_atlas, nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &null_texture->nk_null_tex);
+        nk_font_atlas_end(nk_atlas, nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &default_texture->nk_null_tex);
         nk_style_set_font(nk_ctx.get(), &font->handle);
 
         logger(rx::log::level::k_verbose, "Loaded font %s", FONT_PATH);
@@ -475,7 +475,7 @@ namespace nova::bf {
         config.vertex_layout = VERTEX_LAYOUT;
         config.vertex_size = sizeof(RawNuklearVertex);
         config.vertex_alignment = NK_ALIGNOF(RawNuklearVertex);
-        config.null = null_texture->nk_null_tex;
+        config.null = default_texture->nk_null_tex;
         config.circle_segment_count = 22;
         config.curve_segment_count = 22;
         config.arc_segment_count = 22;
@@ -536,7 +536,7 @@ namespace nova::bf {
         // Textures to bind to the current descriptor set
         rx::vector<Image*> current_descriptor_textures{frame_ctx.allocator};
         current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
-        current_descriptor_textures.push_back(null_texture->image->image);
+        current_descriptor_textures.push_back(default_texture->image->image);
 
         uint32_t num_sets_used = 0;
         uint32_t offset = 0;

@@ -9,7 +9,7 @@ namespace nova::bf {
 
     constexpr const char* UI_PIPELINE_NAME = "BestFriendUI";
 
-    constexpr const char* NULL_TEXTURE_NAME = "BestFriendNull";
+    constexpr const char* DEFAULT_TEXTURE_NAME = "BestFriendDefaultTexture";
 
     constexpr const char* SHADERS_PATH = "shaderpacks/Simple/shaders";
 

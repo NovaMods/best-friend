@@ -26,15 +26,15 @@ namespace nova {
 
             struct nk_image nk_image;
 
-            NuklearImage(renderer::TextureResourceAccessor image, struct nk_image nk_image = {});
+            explicit NuklearImage(renderer::TextureResourceAccessor image, struct nk_image nk_image = {});
         };
 
-        struct NullNuklearImage : NuklearImage {
+        struct DefaultNuklearImage : NuklearImage {
             nk_draw_null_texture nk_null_tex = {};
 
-            NullNuklearImage(const renderer::TextureResourceAccessor& image,
-                             struct nk_image nk_image = {},
-                             nk_draw_null_texture null_tex = {});
+            explicit DefaultNuklearImage(const renderer::TextureResourceAccessor& image,
+                                         struct nk_image nk_image = {},
+                                         nk_draw_null_texture null_tex = {});
         };
 
         struct RawNuklearVertex {
@@ -51,7 +51,7 @@ namespace nova {
         };
 
         enum class ImageId {
-            Null,
+            Default,
             FontAtlas,
 
             Count, // Must always be last
@@ -72,11 +72,8 @@ namespace nova {
              * \brief Begins a frame by doing things like input handling
              */
             void consume_input();
-            rx::optional<NuklearImage> create_image_with_id(const rx::string& name,
-                                                               rx_size width,
-                                                               rx_size height,
-                                                               const void* image_data,
-                                                               uint32_t idx);
+            rx::optional<NuklearImage> create_image_with_id(
+                const rx::string& name, rx_size width, rx_size height, const void* image_data, uint32_t idx);
             [[nodiscard]] rx::optional<NuklearImage> create_image(const rx::string& name,
                                                                   rx_size width,
                                                                   rx_size height,
@@ -131,7 +128,7 @@ namespace nova {
             uint32_t next_image_idx = 0;
 
             nk_font_atlas* nk_atlas;
-            NullNuklearImage* null_texture;
+            DefaultNuklearImage* default_texture;
             NuklearImage* font_image;
             nk_font* font{};
 
@@ -141,7 +138,7 @@ namespace nova {
 
             void create_resources();
 
-            void create_null_texture();
+            void create_default_texture();
 
             void create_ui_ubo();
 
