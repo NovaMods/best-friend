@@ -72,10 +72,10 @@ namespace nova::bf {
 
     rx::optional<bve::Parsed_Static_Object> load_train_mesh(const rx::string& train_file_path) {
         MTR_SCOPE("load_train_mesh", "All");
-        const auto train_file_string = [&] {
-            MTR_SCOPE("load_train_mesh", "ReadFile");
-            return g_bve->read_file_and_convert_to_utf8(train_file_path.data());
-        }();
+
+        MTR_BEGIN("load_train_mesh", "ReadFile");
+        const auto train_file_string = g_bve->read_file_and_convert_to_utf8(train_file_path.data());
+        MTR_END("load_train_mesh", "ReadFile");
 
         if(train_file_string) {
             const auto train = [&] {

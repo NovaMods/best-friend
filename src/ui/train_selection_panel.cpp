@@ -4,6 +4,7 @@
 
 #include "../loading/train_loading.hpp"
 #include "ui_events.hpp"
+
 RX_LOG("TrainPanel", logger);
 
 namespace nova::bf {
