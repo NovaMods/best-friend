@@ -159,10 +159,8 @@ namespace nova::bf {
 
     void NuklearDevice::clear_context() const { nk_clear(nk_ctx.get()); }
 
-    RenderPassCreateInfo NuklearDevice::get_create_info() {
-        static auto create_info = UiRenderpass::get_create_info();
-
-        return create_info;
+    const RenderPassCreateInfo& NuklearDevice::get_create_info() {
+        return UiRenderpass::get_create_info();
     }
 
     void NuklearDevice::write_textures_to_descriptor(FrameContext& frame_ctx, const rx::vector<Image*>& current_descriptor_textures) {
