@@ -62,12 +62,12 @@ namespace nova::bf {
                                        const nk_draw_null_texture null_tex)
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
 
-    NuklearDevice::NuklearDevice(NovaRenderer& renderer)
-        : renderer(renderer), mesh(renderer.create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
+    NuklearDevice::NuklearDevice(NovaRenderer* renderer)
+        : renderer(*renderer), mesh(renderer->create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
 
         name = UI_RENDER_PASS_NAME;
 
-        allocator = renderer.get_global_allocator();
+        allocator = renderer->get_global_allocator();
 
         raw_vertices.resize(MAX_VERTEX_BUFFER_SIZE / sizeof(NuklearVertex));
         indices.resize(MAX_INDEX_BUFFER_SIZE / sizeof(uint32_t));

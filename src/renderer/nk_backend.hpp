@@ -62,7 +62,7 @@ namespace nova {
          */
         class NuklearDevice final : public renderer::UiRenderpass {
         public:
-            explicit NuklearDevice(renderer::NovaRenderer& renderer);
+            explicit NuklearDevice(renderer::NovaRenderer* renderer);
 
             ~NuklearDevice();
 

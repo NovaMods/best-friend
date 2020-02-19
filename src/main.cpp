@@ -41,7 +41,7 @@ int main(int argc, const char** argv) {
 
     auto* world = allocator->create<World>();
 
-    auto* nuklear_device = renderer.create_ui_renderpass<NuklearDevice>(renderer);
+    auto* nuklear_device = renderer.create_ui_renderpass<NuklearDevice>(&renderer);
 
     renderer.load_renderpack("Simple");
 
