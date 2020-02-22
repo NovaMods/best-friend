@@ -58,8 +58,8 @@ namespace nova::bf {
         : image(rx::utility::move(image)), nk_image(nk_image) {}
 
     DefaultNuklearImage::DefaultNuklearImage(const TextureResourceAccessor& image,
-                                       const struct nk_image nk_image,
-                                       const nk_draw_null_texture null_tex)
+                                             const struct nk_image nk_image,
+                                             const nk_draw_null_texture null_tex)
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
 
     NuklearDevice::NuklearDevice(NovaRenderer* renderer)
@@ -159,9 +159,7 @@ namespace nova::bf {
 
     void NuklearDevice::clear_context() const { nk_clear(nk_ctx.get()); }
 
-    const RenderPassCreateInfo& NuklearDevice::get_create_info() {
-        return UiRenderpass::get_create_info();
-    }
+    const RenderPassCreateInfo& NuklearDevice::get_create_info() { return UiRenderpass::get_create_info(); }
 
     void NuklearDevice::write_textures_to_descriptor(FrameContext& frame_ctx, const rx::vector<Image*>& current_descriptor_textures) {
         DescriptorSetWrite write = {};
@@ -465,7 +463,7 @@ namespace nova::bf {
              {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct RawNuklearVertex, color)},
              {NK_VERTEX_LAYOUT_END}};
 
-        const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
+        const auto frame_idx = static_cast<uint8_t>(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
 
         nk_buffer_init_default(&nk_cmds);
         nk_buffer_init_fixed(&nk_vertex_buffer, raw_vertices.data(), MAX_VERTEX_BUFFER_SIZE);
@@ -518,7 +516,7 @@ namespace nova::bf {
         }
 
         if(material_descriptors[frame_idx].is_empty()) {
-            create_descriptor_sets(*pipeline, frame_idx);
+            create_descriptor_sets(*pipeline, static_cast<uint32_t>(frame_idx));
         }
 
         cmds.bind_pipeline(pipeline->pipeline);
@@ -561,7 +559,7 @@ namespace nova::bf {
                 if(current_descriptor_textures.find(img) == rx::vector<Image*>::k_npos) {
                     const auto descriptor_idx = current_descriptor_textures.size();
                     current_descriptor_textures.emplace_back((*texture)->image);
-                    nk_tex_id_to_descriptor_idx.insert(tex_index, descriptor_idx);
+                    nk_tex_id_to_descriptor_idx.insert(tex_index, static_cast<uint32_t>(descriptor_idx));
 
                     // TODO: Figure out how to get the texture IDs into vertex data so that we can actually use them
                 }

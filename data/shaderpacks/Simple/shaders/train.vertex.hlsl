@@ -2,10 +2,6 @@ struct VsInput {
     float3 position : POSITION;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
-    uint uv : TEXCOORD;
-    uint secondary_uv: TEXCOORD2;
-    uint texture_id : INDEX;
-    float4 data : DATA;
 };
 
 struct VsOutput {

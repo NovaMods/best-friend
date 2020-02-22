@@ -447,3 +447,4 @@ MigrationBackup/
 # End of https://www.gitignore.io/api/c++,vim,rust,cmake,visualstudio,visualstudiocode
 
 build/
+trace.json
