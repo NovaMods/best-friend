@@ -68,13 +68,15 @@ namespace nova::bf {
                     indices.emplace_back(static_cast<uint32_t>(index));
                 }
 
-                renderer::MeshData mesh_data{3, train_mesh.indices.count, vertex_data.disown(), indices.disown()};
+                renderer::MeshData mesh_data{3,
+                                             train_mesh.indices.count,
+                                             vertex_data.data(),
+                                             vertex_data.size() * sizeof(BestFriendTrainVertex),
+                                             indices.data(),
+                                             indices.size() * sizeof(uint32_t)};
 
                 const auto mesh = renderer.create_mesh(mesh_data);
                 logger(rx::log::level::k_verbose, "Added mesh %u", mesh);
-
-                allocator->deallocate(mesh_data.vertex_data.data);
-                allocator->deallocate(mesh_data.index_data.data);
 
                 renderer::StaticMeshRenderableData renderable_data{};
                 renderable_data.mesh = mesh;
