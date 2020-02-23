@@ -7,11 +7,17 @@
 #include "../ec/entity.hpp"
 #include "../ui/ui_events.hpp"
 #include "../world/world.hpp"
-#include "train_loading.hpp"
 #include "bve_wrapper.hpp"
+#include "train_loading.hpp"
 
 namespace nova::bf {
     RX_LOG("DataLoader", logger);
+
+    struct BestFriendTrainVertex {
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec2 texcoord;
+    };
 
     inline glm::vec3 to_vec3(const bve::Vector3<float>& vec) { return {vec.x, vec.y, vec.z}; }
 
@@ -23,6 +29,8 @@ namespace nova::bf {
 
     void DataLoader::load_train(const LoadTrainEvent& event) {
         MTR_SCOPE("DataLoader::load_train", "All");
+
+        // TODO: Local allocator for each train
 
         const renderer::FullMaterialPassName pass_name{"Train", "main"};
 
@@ -43,21 +51,30 @@ namespace nova::bf {
                        train_mesh.vertices.count,
                        train_mesh.indices.count);
 
-                renderer::MeshData mesh_data{};
-                mesh_data.vertex_data.reserve(train_mesh.vertices.count);
-                for(uint32_t vert_idx = 0; vert_idx < train_mesh.vertices.count; vert_idx++) {
-                    const auto vertex = train_mesh.vertices.ptr[vert_idx];
-                    mesh_data.vertex_data.emplace_back(
-                        renderer::FullVertex{to_vec3(vertex.position), to_vec3(vertex.normal), {}, {}, {}, {}, {}});
+                // TODO: Figure out a cleaner way to handle this
+
+                auto* allocator = &rx::memory::g_system_allocator;
+                rx::vector<BestFriendTrainVertex> vertex_data{allocator};
+                vertex_data.reserve(train_mesh.vertices.count);
+                for(uint32_t v = 0; v < train_mesh.vertices.count; v++) {
+                    const auto& cur_vert = train_mesh.vertices.ptr[v];
+                    vertex_data.emplace_back(to_vec3(cur_vert.position), to_vec3(cur_vert.normal), to_vec2(cur_vert.coord));
                 }
 
-                mesh_data.indices.reserve(train_mesh.indices.count);
+                rx::vector<uint32_t> indices{allocator};
+                indices.reserve(train_mesh.indices.count);
                 for(uint32_t idx = 0; idx < train_mesh.indices.count; idx++) {
-                    mesh_data.indices.emplace_back(static_cast<uint32_t>(train_mesh.indices.ptr[idx]));
+                    const auto& index = train_mesh.indices.ptr[idx];
+                    indices.emplace_back(static_cast<uint32_t>(index));
                 }
+
+                renderer::MeshData mesh_data{3, train_mesh.indices.count, vertex_data.disown(), indices.disown()};
 
                 const auto mesh = renderer.create_mesh(mesh_data);
                 logger(rx::log::level::k_verbose, "Added mesh %u", mesh);
+
+                allocator->deallocate(mesh_data.vertex_data.data);
+                allocator->deallocate(mesh_data.index_data.data);
 
                 renderer::StaticMeshRenderableData renderable_data{};
                 renderable_data.mesh = mesh;
