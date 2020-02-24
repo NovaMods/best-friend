@@ -44,7 +44,7 @@ namespace nova::bf {
     };
 
     struct UiBatch {
-        DescriptorSet* descriptors;
+        RhiDescriptorSet* descriptors;
         MapAccessor<MeshId, ProceduralMesh> mesh;
     };
 
@@ -161,15 +161,15 @@ namespace nova::bf {
 
     const RenderPassCreateInfo& NuklearDevice::get_create_info() { return UiRenderpass::get_create_info(); }
 
-    void NuklearDevice::write_textures_to_descriptor(FrameContext& frame_ctx, const rx::vector<Image*>& current_descriptor_textures) {
-        DescriptorSetWrite write = {};
+    void NuklearDevice::write_textures_to_descriptor(FrameContext& frame_ctx, const rx::vector<RhiImage*>& current_descriptor_textures) {
+        RhiDescriptorSetWrite write = {};
         write.set = material_descriptors[frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES][UI_TEXTURES_DESCRIPTOR_SET];
         write.binding = UI_TEXTURES_DESCRIPTOR_BINDING;
         write.type = DescriptorType::Texture;
         write.resources.reserve(current_descriptor_textures.size());
 
-        current_descriptor_textures.each_fwd([&](Image* image) {
-            DescriptorResourceInfo info = {};
+        current_descriptor_textures.each_fwd([&](RhiImage* image) {
+            RhiDescriptorResourceInfo info = {};
             info.image_info.image = image;
             info.image_info.format.pixel_format = UI_ATLAS_FORMAT;
             info.image_info.format.dimension_type = TextureDimensionType::Absolute;
@@ -178,7 +178,7 @@ namespace nova::bf {
             write.resources.emplace_back(info);
         });
 
-        rx::vector<DescriptorSetWrite> writes{frame_ctx.allocator};
+        rx::vector<RhiDescriptorSetWrite> writes{frame_ctx.allocator};
         writes.emplace_back(write);
         renderer.get_engine().update_descriptor_sets(writes);
     }
@@ -386,16 +386,16 @@ namespace nova::bf {
         material_descriptors[frame_idx] = device.create_descriptor_sets(pipeline.pipeline_interface, pool, allocator);
 
         // This is hardcoded and kinda gross, but so is my life
-        rx::vector<DescriptorSetWrite> writes{allocator};
+        rx::vector<RhiDescriptorSetWrite> writes{allocator};
         writes.reserve(2);
 
         {
-            DescriptorSetWrite ui_params_write = {};
+            RhiDescriptorSetWrite ui_params_write = {};
             ui_params_write.set = material_descriptors[frame_idx][UI_UBO_DESCRIPTOR_SET];
             ui_params_write.binding = UI_UBO_DESCRIPTOR_BINDING;
             ui_params_write.type = DescriptorType::UniformBuffer;
 
-            DescriptorResourceInfo resource_info;
+            RhiDescriptorResourceInfo resource_info;
             resource_info.buffer_info.buffer = ui_draw_params;
             ui_params_write.resources.emplace_back(resource_info);
 
@@ -403,12 +403,12 @@ namespace nova::bf {
         }
 
         {
-            DescriptorSetWrite sampler_write = {};
+            RhiDescriptorSetWrite sampler_write = {};
             sampler_write.set = material_descriptors[frame_idx][UI_SAMPLER_DESCRIPTOR_SET];
             sampler_write.binding = UI_SAMPLER_DESCRIPTOR_BINDING;
             sampler_write.type = DescriptorType::Sampler;
 
-            DescriptorResourceInfo resource_info;
+            RhiDescriptorResourceInfo resource_info;
             resource_info.sampler_info.sampler = renderer.get_point_sampler();
             sampler_write.resources.emplace_back(resource_info);
 
@@ -524,7 +524,7 @@ namespace nova::bf {
         cmds.bind_descriptor_sets(material_descriptors[frame_idx], pipeline->pipeline_interface);
 
         const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
-        rx::vector<Buffer*> vertex_buffers;
+        rx::vector<RhiBuffer*> vertex_buffers;
         for(uint32_t i = 0; i < 4; i++) {
             vertex_buffers.push_back(vertex_buffer);
         }
@@ -532,7 +532,7 @@ namespace nova::bf {
         cmds.bind_index_buffer(index_buffer, IndexType::Uint16);
 
         // Textures to bind to the current descriptor set
-        rx::vector<Image*> current_descriptor_textures{frame_ctx.allocator};
+        rx::vector<RhiImage*> current_descriptor_textures{frame_ctx.allocator};
         current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
         current_descriptor_textures.push_back(default_texture->image->image);
 
@@ -556,7 +556,7 @@ namespace nova::bf {
             const auto* texture = textures.find(tex_index);
             if(texture != nullptr) {
                 const auto img = (*texture)->image;
-                if(current_descriptor_textures.find(img) == rx::vector<Image*>::k_npos) {
+                if(current_descriptor_textures.find(img) == rx::vector<RhiImage*>::k_npos) {
                     const auto descriptor_idx = current_descriptor_textures.size();
                     current_descriptor_textures.emplace_back((*texture)->image);
                     nk_tex_id_to_descriptor_idx.insert(tex_index, static_cast<uint32_t>(descriptor_idx));

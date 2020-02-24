@@ -84,7 +84,7 @@ namespace nova {
             static const renderer::renderpack::RenderPassCreateInfo& get_create_info();
 
             void write_textures_to_descriptor(renderer::FrameContext& frame_ctx,
-                                              const rx::vector<renderer::rhi::Image*>& current_descriptor_textures);
+                                              const rx::vector<renderer::rhi::RhiImage*>& current_descriptor_textures);
 
         private:
             std::shared_ptr<nk_context> nk_ctx;
@@ -93,7 +93,7 @@ namespace nova {
 
             glm::vec2 framebuffer_size_ratio{};
 
-            renderer::rhi::Buffer* ui_draw_params = nullptr;
+            renderer::rhi::RhiBuffer* ui_draw_params = nullptr;
 
             nk_buffer nk_cmds{};
 
@@ -114,7 +114,7 @@ namespace nova {
 
             glm::dvec2 most_recent_mouse_position{};
 
-            renderer::rhi::DescriptorPool* pool = nullptr;
+            renderer::rhi::RhiDescriptorPool* pool = nullptr;
 
             /*!
              * \brief Descriptor sets for the UI material
@@ -122,7 +122,7 @@ namespace nova {
              * The UI material doesn't _actually_ exist, because rendering UI is hard, but if there was a real UI material, these
              * descriptors would be for that
              */
-            rx::array<rx::vector<renderer::rhi::DescriptorSet*>[renderer::NUM_IN_FLIGHT_FRAMES]> material_descriptors;
+            rx::array<rx::vector<renderer::rhi::RhiDescriptorSet*>[renderer::NUM_IN_FLIGHT_FRAMES]> material_descriptors;
 
             rx::map<int, renderer::TextureResourceAccessor> textures;
             uint32_t next_image_idx = 0;
