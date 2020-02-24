@@ -14,7 +14,7 @@
 #include "../util/constants.hpp"
 #include "rx/core/algorithm/max.h"
 using namespace nova::renderer;
-using namespace shaderpack;
+using namespace renderpack;
 using namespace rhi;
 
 namespace nova::bf {
@@ -35,7 +35,7 @@ namespace nova::bf {
     constexpr uint32_t UI_TEXTURES_DESCRIPTOR_SET = 1;
     constexpr uint32_t UI_TEXTURES_DESCRIPTOR_BINDING = 1;
 
-    constexpr PixelFormatEnum UI_ATLAS_FORMAT = PixelFormatEnum::RGBA8;
+    constexpr PixelFormat UI_ATLAS_FORMAT = PixelFormat::Rgba8;
     constexpr rx_size UI_ATLAS_WIDTH = 512;
     constexpr rx_size UI_ATLAS_HEIGHT = 512;
 
@@ -172,7 +172,7 @@ namespace nova::bf {
             DescriptorResourceInfo info = {};
             info.image_info.image = image;
             info.image_info.format.pixel_format = UI_ATLAS_FORMAT;
-            info.image_info.format.dimension_type = TextureDimensionTypeEnum::Absolute;
+            info.image_info.format.dimension_type = TextureDimensionType::Absolute;
             info.image_info.format.width = UI_ATLAS_WIDTH;
             info.image_info.format.height = UI_ATLAS_HEIGHT;
             write.resources.emplace_back(info);

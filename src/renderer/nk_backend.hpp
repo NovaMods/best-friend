@@ -81,7 +81,7 @@ namespace nova {
 
             void clear_context() const;
 
-            static const renderer::shaderpack::RenderPassCreateInfo& get_create_info();
+            static const renderer::renderpack::RenderPassCreateInfo& get_create_info();
 
             void write_textures_to_descriptor(renderer::FrameContext& frame_ctx,
                                               const rx::vector<renderer::rhi::Image*>& current_descriptor_textures);
