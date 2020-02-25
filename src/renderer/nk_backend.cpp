@@ -456,7 +456,7 @@ namespace nova::bf {
                                   buffer.size);
     }
 
-    void NuklearDevice::setup_renderpass(CommandList& cmds, FrameContext& frame_ctx) {
+    void NuklearDevice::setup_renderpass(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
         static const nk_draw_vertex_layout_element VERTEX_LAYOUT[] =
             {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct RawNuklearVertex, position)},
              {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct RawNuklearVertex, uv)},
@@ -506,7 +506,7 @@ namespace nova::bf {
         frame_ctx.nova->get_engine().write_data_to_buffer(&ui_matrix[0][0], sizeof(glm::mat4), 0, ui_draw_params);
     }
 
-    void NuklearDevice::render_ui(CommandList& cmds, FrameContext& frame_ctx) {
+    void NuklearDevice::render_ui(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
         const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
 
         const auto pipeline = frame_ctx.nova->get_pipeline_storage().get_pipeline(UI_PIPELINE_NAME);

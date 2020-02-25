@@ -156,12 +156,12 @@ namespace nova {
             /*!
              * \brief Uploads vertex data for this frame's UI
              */
-            void setup_renderpass(renderer::rhi::CommandList& cmds, renderer::FrameContext& frame_ctx) override;
+            void setup_renderpass(renderer::rhi::RhiRenderCommandList& cmds, renderer::FrameContext& frame_ctx) override;
 
             /*!
              * \brief Renders all the UI elements that were drawn to the context
              */
-            void render_ui(renderer::rhi::CommandList& cmds, renderer::FrameContext& frame_ctx) override;
+            void render_ui(renderer::rhi::RhiRenderCommandList& cmds, renderer::FrameContext& frame_ctx) override;
         };
     } // namespace bf
 } // namespace nova
