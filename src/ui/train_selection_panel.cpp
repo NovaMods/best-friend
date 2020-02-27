@@ -7,8 +7,8 @@
 
 RX_LOG("TrainPanel", logger);
 
-namespace nova::bf {
-    TrainSelectionPanel::TrainSelectionPanel(ec::Entity* owner, nk_context* ctx) : Panel(owner), ctx(ctx) {}
+namespace nova::bf::ui {
+    TrainSelectionPanel::TrainSelectionPanel(nk_context* ctx) : ctx(ctx) {}
 
     void TrainSelectionPanel::draw() {
         const bool is_train_selected = !last_loaded_train.is_empty();

@@ -5,13 +5,13 @@
 
 #include "panel.hpp"
 
-namespace nova::bf {
+namespace nova::bf::ui {
     /*!
      * \brief UI panel that allows the user to select a train
      */
     class TrainSelectionPanel final : public Panel {
     public:
-        explicit TrainSelectionPanel(ec::Entity* owner, nk_context* ctx);
+        explicit TrainSelectionPanel(nk_context* ctx);
 
         void draw() override;
 

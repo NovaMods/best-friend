@@ -7,6 +7,7 @@
 #include <nuklear.h>
 
 #include "nova_renderer/resource_loader.hpp"
+#include "nova_renderer/util/auto_ptr.hpp"
 
 //! \brief Nuklear backend that renders Nuklear geometry with the Nova renderer
 //!
@@ -66,7 +67,7 @@ namespace nova {
 
             ~NuklearDevice();
 
-            [[nodiscard]] std::shared_ptr<nk_context> get_context() const;
+            [[nodiscard]] nk_context* get_context() const;
 
             /*!
              * \brief Begins a frame by doing things like input handling
@@ -87,7 +88,7 @@ namespace nova {
                                               const rx::vector<renderer::rhi::RhiImage*>& current_descriptor_textures);
 
         private:
-            std::shared_ptr<nk_context> nk_ctx;
+            RaiiPtr<nk_context> nk_ctx;
 
             renderer::NovaRenderer& renderer;
 

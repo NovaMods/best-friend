@@ -1,12 +1,14 @@
 #include <bve.hpp>
+#include <entt/entt.hpp>
 #include <nova_renderer/nova_renderer.hpp>
 
 #include "ec/entity.hpp"
+#include "ec/transform.hpp"
 #include "loading/data_loader.hpp"
+#include "renderer/camera_component.hpp"
 #include "renderer/nk_backend.hpp"
 #include "ui/train_selection_panel.hpp"
 #include "world/world.hpp"
-#include "renderer/camera_component.hpp"
 using namespace nova;
 using namespace bf;
 using namespace renderer;
@@ -14,6 +16,15 @@ using namespace filesystem;
 using namespace ec;
 
 RX_LOG("BestFriend", logger);
+
+void tick_polymorphic_components(const entt::registry& registry, const double delta_time) {
+    auto view = registry.view<PolymorphicComponent>();
+
+    for(auto entity : view) {
+        auto& component = view.get<PolymorphicComponent>(entity);
+        component.component->tick(delta_time);
+    }
+}
 
 int main(int argc, const char** argv) {
     init_rex();
@@ -48,19 +59,19 @@ int main(int argc, const char** argv) {
 
     DataLoader loader{*world, renderer};
 
+    entt::registry registry;
+
     // Instantiate the basic entities
     // TODO: Make something more better
-    auto* train_selection_entity = new Entity;
-    train_selection_entity->add_component<TrainSelectionPanel>(nuklear_device->get_context().get());
-    world->add_entity(train_selection_entity);
+    const auto train_selection_entity = registry.create();
+    registry.assign<PolymorphicComponent>(train_selection_entity, new ui::TrainSelectionPanel{nuklear_device->get_context()});
 
     CameraCreateInfo create_info = {};
     create_info.name = "BestFriendCamera";
 
-    auto* camera = new Entity;
-    camera->add_component<Transform>();
-    camera->add_component<CameraComponent>(renderer.create_camera(create_info));
-    world->add_entity(camera);
+    const auto camera = registry.create();
+    registry.assign<Transform>(camera);
+    registry.assign<CameraComponent>(camera, renderer.create_camera(create_info));
 
     const auto& window = renderer.get_window();
 
@@ -82,7 +93,7 @@ int main(int argc, const char** argv) {
 
         window.poll_input();
 
-        world->tick(last_frame_duration);
+        tick_polymorphic_components(registry, last_frame_duration);
 
         renderer.execute_frame();
 
