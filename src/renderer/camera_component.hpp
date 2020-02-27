@@ -9,7 +9,7 @@ namespace nova::bf {
     public:
         explicit CameraComponent(ec::Entity* owner, renderer::CameraAccessor camera);
 
-        ~CameraComponent() override;
+        ~CameraComponent() override = default;
 
         void begin_play() override;
 
