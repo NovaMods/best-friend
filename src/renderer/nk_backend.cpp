@@ -63,11 +63,11 @@ namespace nova::bf {
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
 
     NuklearDevice::NuklearDevice(NovaRenderer* renderer)
-        : renderer(*renderer), mesh(renderer->create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)) {
+        : renderer(*renderer),
+          mesh(renderer->create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)),
+          allocator{renderer->get_global_allocator()} {
 
         name = UI_RENDER_PASS_NAME;
-
-        allocator = renderer->get_global_allocator();
 
         raw_vertices.resize(MAX_VERTEX_BUFFER_SIZE / sizeof(NuklearVertex));
         indices.resize(MAX_INDEX_BUFFER_SIZE / sizeof(uint32_t));
@@ -89,9 +89,9 @@ namespace nova::bf {
         nk_buffer_free(&nk_cmds);
         nk_clear(nk_ctx.get());
 
-        allocator->destroy<NuklearImage>(font_image);
-        allocator->destroy<DefaultNuklearImage>(default_texture);
-        allocator->destroy<nk_font_atlas>(nk_atlas);
+        allocator.destroy<NuklearImage>(font_image);
+        allocator.destroy<DefaultNuklearImage>(default_texture);
+        allocator.destroy<nk_font_atlas>(nk_atlas);
     }
 
     std::shared_ptr<nk_context> NuklearDevice::get_context() const { return nk_ctx; }
@@ -195,12 +195,12 @@ namespace nova::bf {
     }
 
     void NuklearDevice::create_default_texture() {
-        rx::vector<uint8_t> default_img_data{allocator, 8 * 8 * 4};
+        rx::vector<uint8_t> default_img_data{&allocator, 8 * 8 * 4};
         default_img_data.each_fwd([](uint8_t& elem) { elem = 0xFF; }); // Set the whole texture to white
 
         const rx::optional<NuklearImage> default_image = create_image(DEFAULT_TEXTURE_NAME, 8, 8, default_img_data.data());
         if(default_image) {
-            default_texture = allocator->create<DefaultNuklearImage>(default_image->image, default_image->nk_image);
+            default_texture = allocator.create<DefaultNuklearImage>(default_image->image, default_image->nk_image);
 
         } else {
             logger(rx::log::level::k_error, "Could not create null texture");
@@ -218,7 +218,7 @@ namespace nova::bf {
     }
 
     void NuklearDevice::load_font() {
-        nk_atlas = allocator->create<nk_font_atlas>();
+        nk_atlas = allocator.create<nk_font_atlas>();
         nk_font_atlas_init_default(nk_atlas);
         nk_font_atlas_begin(nk_atlas);
 
@@ -246,7 +246,7 @@ namespace nova::bf {
                                                          image_data,
                                                          static_cast<uint32_t>(ImageId::FontAtlas));
         if(new_font_atlas) {
-            font_image = allocator->create<NuklearImage>(new_font_atlas->image, new_font_atlas->nk_image);
+            font_image = allocator.create<NuklearImage>(new_font_atlas->image, new_font_atlas->nk_image);
 
         } else {
             logger(rx::log::level::k_error, "Could not create font atlas texture");
@@ -386,7 +386,7 @@ namespace nova::bf {
         material_descriptors[frame_idx] = device.create_descriptor_sets(pipeline.pipeline_interface, pool, allocator);
 
         // This is hardcoded and kinda gross, but so is my life
-        rx::vector<RhiDescriptorSetWrite> writes{allocator};
+        rx::vector<RhiDescriptorSetWrite> writes{&allocator};
         writes.reserve(2);
 
         {

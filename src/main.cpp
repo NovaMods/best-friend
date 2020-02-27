@@ -6,6 +6,7 @@
 #include "renderer/nk_backend.hpp"
 #include "ui/train_selection_panel.hpp"
 #include "world/world.hpp"
+#include "renderer/camera_component.hpp"
 using namespace nova;
 using namespace bf;
 using namespace renderer;
@@ -33,7 +34,7 @@ int main(int argc, const char** argv) {
     // TODO: Set BVE panic handlers and whatnot
     bve::bve_init();
 
-    NovaRenderer renderer(settings);
+    NovaRenderer renderer{settings};
 
     renderer.set_num_meshes(32); // Best guess, should fix when we know more
 
@@ -52,6 +53,14 @@ int main(int argc, const char** argv) {
     auto* train_selection_entity = new Entity;
     train_selection_entity->add_component<TrainSelectionPanel>(nuklear_device->get_context().get());
     world->add_entity(train_selection_entity);
+
+    CameraCreateInfo create_info = {};
+    create_info.name = "BestFriendCamera";
+
+    auto* camera = new Entity;
+    camera->add_component<Transform>();
+    camera->add_component<CameraComponent>(renderer.create_camera(create_info));
+    world->add_entity(camera);
 
     const auto& window = renderer.get_window();
 

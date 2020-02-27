@@ -60,6 +60,8 @@ set(
 	
     src/renderer/nk_backend.hpp
     src/renderer/nk_backend.cpp
+    src/renderer/camera_component.hpp
+    src/renderer/camera_component.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${BEST_FRIEND_SOURCES})

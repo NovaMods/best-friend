@@ -1,3 +1,10 @@
+[[vk::push_constant]]
+struct PushConstants {
+    uint camera_index;
+    uint material_index;
+    uint material_instance_index;
+} push_constants;
+
 struct VsInput {
     float3 position : POSITION;
     float3 normal : NORMAL;

@@ -31,6 +31,13 @@ namespace nova::ec {
 		virtual ~Component() = default;
 
 		/*!
+		 * \brief Initialize this component after the entity it belongs to is fully constructed
+		 *
+		 * Should be used to cache references to other component, call methods on other components, etc
+		 */
+        virtual void begin_play() {}
+
+		/*!
 		 * \brief Perform whatever per-frame work that this component performs
 		 */
         virtual void tick(double /* delta_time */) {}

@@ -132,7 +132,7 @@ namespace nova {
             NuklearImage* font_image;
             nk_font* font{};
 
-            rx::memory::allocator* allocator;
+            rx::memory::allocator& allocator;
 
             void init_nuklear();
 
