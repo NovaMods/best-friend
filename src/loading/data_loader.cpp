@@ -4,11 +4,10 @@
 #include <nova_renderer/nova_renderer.hpp>
 #include <rx/core/log.h>
 
-#include "../ec/entity.hpp"
 #include "../ui/ui_events.hpp"
-#include "../world/world.hpp"
 #include "bve_wrapper.hpp"
 #include "train_loading.hpp"
+#include "../renderer/train_rendering.hpp"
 
 namespace nova::bf {
     RX_LOG("DataLoader", logger);
@@ -23,7 +22,7 @@ namespace nova::bf {
 
     inline glm::vec2 to_vec2(const bve::Vector2<float>& vec) { return {vec.x, vec.y}; }
 
-    DataLoader::DataLoader(World& world, renderer::NovaRenderer& renderer) : world(world), renderer(renderer) {
+    DataLoader::DataLoader(entt::registry& world, renderer::NovaRenderer& renderer) : world(world), renderer(renderer) {
         g_ui_event_bus->sink<LoadTrainEvent>().connect<&DataLoader::load_train>(this);
     }
 
@@ -39,7 +38,7 @@ namespace nova::bf {
             MTR_SCOPE("DataLoader::load_train", "SendTrainToGpu");
             logger(rx::log::level::k_verbose, "This chimera didn't explode");
 
-            auto* train_entity = new ec::Entity;
+            auto train_entity = world.create();
 
             const auto train_meshes = train->meshes;
 
@@ -84,9 +83,9 @@ namespace nova::bf {
 
                 const auto renderable = renderer.add_renderable_for_material(pass_name, renderable_data);
                 logger(rx::log::level::k_verbose, "Added renderable %u", renderable);
-            }
 
-            world.add_entity(train_entity);
+                world.assign<RenderableComponent>(train_entity, true, renderable);
+            }
 
             g_bve->delete_parsed_static_object(rx::utility::move(*train));
         }

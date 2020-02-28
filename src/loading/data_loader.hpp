@@ -1,5 +1,6 @@
 #pragma once
-class World;
+
+#include <entt/entity/registry.hpp>
 
 namespace nova {
     namespace renderer {
@@ -12,12 +13,12 @@ namespace nova::bf {
 
     class DataLoader {
     public:
-        DataLoader(World& world, renderer::NovaRenderer& renderer);
+        DataLoader(entt::registry& world, renderer::NovaRenderer& renderer);
 
         void load_train(const LoadTrainEvent& event);
 
     private:
-        World& world;
+        entt::registry& world;
         renderer::NovaRenderer& renderer;
     };
 } // namespace nova::bf

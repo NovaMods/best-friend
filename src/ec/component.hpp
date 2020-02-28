@@ -13,8 +13,13 @@ namespace nova::ec {
      */
     class Component {
     public:
+        Component() = default;
+
         Component(const Component& other) = delete;
         Component& operator=(const Component& other) = delete;
+
+        Component(Component&& old) noexcept = delete;
+        Component& operator=(Component&& old) noexcept = delete;
 
         virtual ~Component() = default;
 
@@ -37,6 +42,6 @@ namespace nova::ec {
      * This allows one to write OOP code for your gameplay engine, while still allowing engine systems to use raw ECS
      */
     struct PolymorphicComponent {
-        Component* component;
+       Component* component;
     };
 } // namespace nova::ec

@@ -2,13 +2,13 @@
 #include <entt/entt.hpp>
 #include <nova_renderer/nova_renderer.hpp>
 
-#include "ec/entity.hpp"
+#include "ec/system.hpp"
 #include "ec/transform.hpp"
 #include "loading/data_loader.hpp"
 #include "renderer/camera_component.hpp"
 #include "renderer/nk_backend.hpp"
+#include "renderer/train_rendering.hpp"
 #include "ui/train_selection_panel.hpp"
-#include "world/world.hpp"
 using namespace nova;
 using namespace bf;
 using namespace renderer;
@@ -17,13 +17,30 @@ using namespace ec;
 
 RX_LOG("BestFriend", logger);
 
-void tick_polymorphic_components(const entt::registry& registry, const double delta_time) {
+void tick_polymorphic_components(entt::registry& registry, const double delta_time) {
     auto view = registry.view<PolymorphicComponent>();
 
     for(auto entity : view) {
         auto& component = view.get<PolymorphicComponent>(entity);
         component.component->tick(delta_time);
     }
+}
+
+void update_camera_positions(entt::registry& registry) {
+    auto view = registry.view<CameraComponent, Transform>();
+
+    for(auto entity : view) {
+        const auto& transform = view.get<Transform>(entity);
+        auto& camera = view.get<CameraComponent>(entity);
+
+        camera.camera->position = transform.position;
+        camera.camera->rotation = transform.rotation;
+    }
+}
+
+void update_camera_position(Transform& transform, CameraComponent& camera) {
+    camera.camera->position = transform.position;
+    camera.camera->rotation = transform.rotation;
 }
 
 int main(int argc, const char** argv) {
@@ -51,15 +68,13 @@ int main(int argc, const char** argv) {
 
     auto* allocator = &rx::memory::g_system_allocator;
 
-    auto* world = allocator->create<World>();
-
     auto* nuklear_device = renderer.create_ui_renderpass<NuklearDevice>(&renderer);
 
     renderer.load_renderpack("Simple");
 
-    DataLoader loader{*world, renderer};
-
     entt::registry registry;
+
+    DataLoader loader{registry, renderer};
 
     // Instantiate the basic entities
     // TODO: Make something more better
@@ -93,7 +108,10 @@ int main(int argc, const char** argv) {
 
         window.poll_input();
 
-        tick_polymorphic_components(registry, last_frame_duration);
+        update_system<PolymorphicComponent>(registry,
+                                            [&](PolymorphicComponent& component) { component.component->tick(last_frame_duration); });
+
+        update_system<Transform, CameraComponent>(registry, update_camera_position);
 
         renderer.execute_frame();
 

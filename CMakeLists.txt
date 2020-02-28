@@ -32,16 +32,10 @@ set(
 
     src/util/constants.hpp
 	
-    src/ec/entity.hpp
-    src/ec/entity.cpp
     src/ec/component.hpp
-    src/ec/component.cpp
     src/ec/transform.hpp
-    src/ec/transform.cpp
-	
-    src/world/world.hpp
-    src/world/world.cpp
-	
+    src/ec/system.hpp
+		
     src/ui/panel_manager.hpp
     src/ui/panel_manager.cpp
     src/ui/panel.hpp
@@ -61,7 +55,8 @@ set(
     src/renderer/nk_backend.hpp
     src/renderer/nk_backend.cpp
     src/renderer/camera_component.hpp
-    src/renderer/camera_component.cpp
+    src/renderer/train_rendering.hpp
+    src/renderer/train_rendering.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${BEST_FRIEND_SOURCES})
