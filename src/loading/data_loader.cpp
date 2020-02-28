@@ -77,9 +77,9 @@ namespace nova::bf {
                 const auto mesh = renderer.create_mesh(mesh_data);
                 logger(rx::log::level::k_verbose, "Added mesh %u", mesh);
 
-                renderer::StaticMeshRenderableData renderable_data{};
+                renderer::StaticMeshRenderableCreateInfo renderable_data{};
                 renderable_data.mesh = mesh;
-                renderable_data.initial_scale = glm::vec3{0.01};
+                renderable_data.scale = glm::vec3{0.01};
 
                 const auto renderable = renderer.add_renderable_for_material(pass_name, renderable_data);
                 logger(rx::log::level::k_verbose, "Added renderable %u", renderable);

@@ -26,23 +26,6 @@ void tick_polymorphic_components(entt::registry& registry, const double delta_ti
     }
 }
 
-void update_camera_positions(entt::registry& registry) {
-    auto view = registry.view<CameraComponent, Transform>();
-
-    for(auto entity : view) {
-        const auto& transform = view.get<Transform>(entity);
-        auto& camera = view.get<CameraComponent>(entity);
-
-        camera.camera->position = transform.position;
-        camera.camera->rotation = transform.rotation;
-    }
-}
-
-void update_camera_position(Transform& transform, CameraComponent& camera) {
-    camera.camera->position = transform.position;
-    camera.camera->rotation = transform.rotation;
-}
-
 int main(int argc, const char** argv) {
     init_rex();
 
@@ -108,10 +91,10 @@ int main(int argc, const char** argv) {
 
         window.poll_input();
 
-        update_system<PolymorphicComponent>(registry,
-                                            [&](PolymorphicComponent& component) { component.component->tick(last_frame_duration); });
+        tick_polymorphic_components(registry, last_frame_duration);
+        update_camera_positions(registry);
 
-        update_system<Transform, CameraComponent>(registry, update_camera_position);
+        update_renderable_transforms(registry, renderer);
 
         renderer.execute_frame();
 
@@ -119,6 +102,8 @@ int main(int argc, const char** argv) {
         last_frame_duration = (frame_end_time - frame_start_time) / CLOCKS_PER_SEC;
         frame_counter++;
     }
+
+    logger(rx::log::level::k_warning, "REMAIN INDOORS");
 
     return 0;
 }

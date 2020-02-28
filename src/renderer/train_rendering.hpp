@@ -2,22 +2,17 @@
 
 #include <entt/entity/registry.hpp>
 
+#include "nova_renderer/nova_renderer.hpp"
 #include "nova_renderer/renderables.hpp"
-
-#include "../ec/transform.hpp"
 
 namespace nova::bf {
     struct RenderableComponent {
-        bool enabled;
+        bool visible;
         renderer::RenderableId renderable;
     };
 
-    inline void update_renderable_positions(entt::registry& registry) {
-        auto view = registry.view<RenderableComponent, Transform>();
-
-        for(auto entity : view) {
-            const auto& transform = registry.get<Transform>(entity);
-            //   const auto
-        }
-    }
+    /*!
+     * \brief Updates the positions of all the renderables, ensuring that Nova will render everything with the correct transforms
+     */
+    void update_renderable_transforms(entt::registry& registry, renderer::NovaRenderer& renderer);
 } // namespace nova::bf

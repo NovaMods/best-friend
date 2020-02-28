@@ -55,6 +55,7 @@ set(
     src/renderer/nk_backend.hpp
     src/renderer/nk_backend.cpp
     src/renderer/camera_component.hpp
+    src/renderer/camera_component.cpp
     src/renderer/train_rendering.hpp
     src/renderer/train_rendering.cpp
 )
