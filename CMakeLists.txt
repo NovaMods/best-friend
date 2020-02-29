@@ -58,6 +58,9 @@ set(
     src/renderer/camera_component.cpp
     src/renderer/train_rendering.hpp
     src/renderer/train_rendering.cpp
+
+    src/input/input.hpp
+    src/input/input.cpp
 )
 
 source_group(TREE ${CMAKE_CURRENT_LIST_DIR} FILES ${BEST_FRIEND_SOURCES})

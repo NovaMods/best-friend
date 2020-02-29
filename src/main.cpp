@@ -26,6 +26,10 @@ void tick_polymorphic_components(entt::registry& registry, const double delta_ti
     }
 }
 
+void process_input() {
+    
+}
+
 int main(int argc, const char** argv) {
     init_rex();
 
