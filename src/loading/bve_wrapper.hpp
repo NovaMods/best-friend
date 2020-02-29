@@ -39,5 +39,5 @@ namespace nova::bf {
         bve::Texture_Set* set;
     };
 
-    extern RX_GLOBAL<BveWrapper> g_bve;
+    extern rx::global<BveWrapper> g_bve;
 } // namespace nova::bf

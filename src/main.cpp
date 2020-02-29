@@ -49,8 +49,6 @@ int main(int argc, const char** argv) {
 
     renderer.set_num_meshes(32); // Best guess, should fix when we know more
 
-    auto* allocator = &rx::memory::g_system_allocator;
-
     auto* nuklear_device = renderer.create_ui_renderpass<NuklearDevice>(&renderer);
 
     renderer.load_renderpack("Simple");

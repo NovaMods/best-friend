@@ -5,7 +5,7 @@
 using namespace bve;
 
 namespace nova::bf {
-    RX_GLOBAL<BveWrapper> g_bve{"BestFriend", "BVE"};
+    rx::global<BveWrapper> g_bve{"BestFriend", "BVE"};
 
     BveWrapper::BveWrapper() { bve_init(); }
 
