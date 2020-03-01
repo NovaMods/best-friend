@@ -1,8 +1,8 @@
 #pragma once
+
 #include <entt/entity/registry.hpp>
 #include <glm/vec3.hpp>
-
-#include "nova_renderer/window.hpp"
+#include <nova_renderer/window.hpp>
 
 namespace nova::bf {
     /*!
@@ -30,5 +30,17 @@ namespace nova::bf {
         float cur_pitch{};
     };
 
-    void update_rotating_cameras(entt::registry& registry, renderer::NovaWindow& window);
+    /*!
+     * \brief Class that routes input from the window to relevant components
+     */
+    class InputRouter {
+    public:
+        InputRouter(entt::registry& registry, renderer::NovaWindow& window);
+
+        void update_rotating_entities() const;
+
+    private:
+        entt::registry& registry;
+        renderer::NovaWindow& window;
+    };
 } // namespace nova::bf

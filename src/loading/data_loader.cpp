@@ -8,6 +8,7 @@
 #include "bve_wrapper.hpp"
 #include "train_loading.hpp"
 #include "../renderer/train_rendering.hpp"
+#include "../ec/transform.hpp"
 
 namespace nova::bf {
     RX_LOG("DataLoader", logger);
@@ -22,7 +23,7 @@ namespace nova::bf {
 
     inline glm::vec2 to_vec2(const bve::Vector2<float>& vec) { return {vec.x, vec.y}; }
 
-    DataLoader::DataLoader(entt::registry& world, renderer::NovaRenderer& renderer) : world(world), renderer(renderer) {
+    DataLoader::DataLoader(entt::registry& world, renderer::NovaRenderer& renderer) : registry(world), renderer(renderer) {
         g_ui_event_bus->sink<LoadTrainEvent>().connect<&DataLoader::load_train>(this);
     }
 
@@ -38,7 +39,9 @@ namespace nova::bf {
             MTR_SCOPE("DataLoader::load_train", "SendTrainToGpu");
             logger(rx::log::level::k_verbose, "This chimera didn't explode");
 
-            auto train_entity = world.create();
+            auto train_entity = registry.create();
+            registry.assign<Transform>(train_entity);
+            registry.assign<HierarchyMember>(train_entity);
 
             const auto train_meshes = train->meshes;
 
@@ -84,7 +87,13 @@ namespace nova::bf {
                 const auto renderable = renderer.add_renderable_for_material(pass_name, renderable_data);
                 logger(rx::log::level::k_verbose, "Added renderable %u", renderable);
 
-                world.assign<RenderableComponent>(train_entity, true, renderable);
+                auto train_mesh_entity = registry.create();
+                registry.assign<Transform>(train_mesh_entity);
+                registry.assign<RenderableComponent>(train_mesh_entity, true, renderable);
+                registry.assign<HierarchyMember>(train_mesh_entity, train_entity, rx::vector<entt::entity>{});
+
+                auto& train_hierarchy = registry.get<HierarchyMember>(train_entity);
+                train_hierarchy.children.emplace_back(train_mesh_entity);
             }
 
             g_bve->delete_parsed_static_object(rx::utility::move(*train));

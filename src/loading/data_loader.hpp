@@ -18,7 +18,7 @@ namespace nova::bf {
         void load_train(const LoadTrainEvent& event);
 
     private:
-        entt::registry& world;
+        entt::registry& registry;
         renderer::NovaRenderer& renderer;
     };
 } // namespace nova::bf

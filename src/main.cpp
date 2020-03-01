@@ -4,16 +4,21 @@
 
 #include "ec/system.hpp"
 #include "ec/transform.hpp"
+#include "input/input.hpp"
 #include "loading/data_loader.hpp"
 #include "renderer/camera_component.hpp"
 #include "renderer/nk_backend.hpp"
 #include "renderer/train_rendering.hpp"
 #include "ui/train_selection_panel.hpp"
+#include "util/constants.hpp"
+
 using namespace nova;
 using namespace bf;
 using namespace renderer;
 using namespace filesystem;
 using namespace ec;
+
+rx::global_group g_best_friend_group{BEST_FRIEND_GLOBALS_GROUP};
 
 RX_LOG("BestFriend", logger);
 
@@ -26,9 +31,7 @@ void tick_polymorphic_components(entt::registry& registry, const double delta_ti
     }
 }
 
-void process_input() {
-    
-}
+void process_input() {}
 
 int main(int argc, const char** argv) {
     init_rex();
@@ -60,6 +63,7 @@ int main(int argc, const char** argv) {
     entt::registry registry;
 
     // Register callbacks to hook up input system to input-receiving component
+    InputRouter router{registry, renderer.get_window()};
 
     DataLoader loader{registry, renderer};
 
