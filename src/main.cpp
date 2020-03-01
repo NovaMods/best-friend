@@ -18,7 +18,7 @@ using namespace ec;
 RX_LOG("BestFriend", logger);
 
 void tick_polymorphic_components(entt::registry& registry, const double delta_time) {
-    auto view = registry.view<PolymorphicComponent>();
+    const auto& view = registry.view<PolymorphicComponent>();
 
     for(auto entity : view) {
         auto& component = view.get<PolymorphicComponent>(entity);
@@ -58,6 +58,8 @@ int main(int argc, const char** argv) {
     renderer.load_renderpack("Simple");
 
     entt::registry registry;
+
+    // Register callbacks to hook up input system to input-receiving component
 
     DataLoader loader{registry, renderer};
 

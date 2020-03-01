@@ -63,7 +63,7 @@ namespace nova::bf {
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
 
     NuklearDevice::NuklearDevice(NovaRenderer* renderer)
-        : nk_ctx{renderer->get_global_allocator()},
+        : nk_ctx{rx::make_ptr<nk_context>(&renderer->get_global_allocator())},
           renderer(*renderer),
           mesh(renderer->create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)),
           allocator{renderer->get_global_allocator()} {
@@ -88,17 +88,17 @@ namespace nova::bf {
 
     NuklearDevice::~NuklearDevice() {
         nk_buffer_free(&nk_cmds);
-        nk_clear(&nk_ctx);
+        nk_clear(nk_ctx.get());
 
         allocator.destroy<NuklearImage>(font_image);
         allocator.destroy<DefaultNuklearImage>(default_texture);
         allocator.destroy<nk_font_atlas>(nk_atlas);
     }
 
-    nk_context* NuklearDevice::get_context() const { return &nk_ctx; }
+    nk_context* NuklearDevice::get_context() const { return nk_ctx.get(); }
 
     void NuklearDevice::consume_input() {
-        nk_input_begin(&nk_ctx);
+        nk_input_begin(nk_ctx.get());
 
         // TODO: Handle people typing text
         // TODO: Scrolling of some sort
@@ -106,18 +106,18 @@ namespace nova::bf {
         // Consume keyboard input
         {
             rx::concurrency::scope_lock l(key_buffer_mutex);
-            keys.each_fwd([&](const std::pair<nk_keys, bool>& pair) { nk_input_key(&nk_ctx, pair.first, pair.second); });
+            keys.each_fwd([&](const std::pair<nk_keys, bool>& pair) { nk_input_key(nk_ctx.get(), pair.first, pair.second); });
             keys.clear();
         }
 
         {
             rx::concurrency::scope_lock l(mouse_button_buffer_mutex);
             // Update NK with the current mouse position
-            nk_input_motion(&nk_ctx, static_cast<int>(most_recent_mouse_position.x), static_cast<int>(most_recent_mouse_position.y));
+            nk_input_motion(nk_ctx.get(), static_cast<int>(most_recent_mouse_position.x), static_cast<int>(most_recent_mouse_position.y));
 
             // Consume the most recent mouse button
             mouse_buttons.each_fwd([&](const std::pair<nk_buttons, bool>& mouse_event) {
-                nk_input_button(&nk_ctx,
+                nk_input_button(nk_ctx.get(),
                                 mouse_event.first,
                                 static_cast<int>(most_recent_mouse_position.x),
                                 static_cast<int>(most_recent_mouse_position.y),
@@ -126,7 +126,7 @@ namespace nova::bf {
             mouse_buttons.clear();
         }
 
-        nk_input_end(&nk_ctx);
+        nk_input_end(nk_ctx.get());
     }
 
     rx::optional<NuklearImage> NuklearDevice::create_image_with_id(
@@ -158,7 +158,7 @@ namespace nova::bf {
         return create_image_with_id(name, width, height, image_data, idx);
     }
 
-    void NuklearDevice::clear_context() const { nk_clear(&nk_ctx); }
+    void NuklearDevice::clear_context() const { nk_clear(nk_ctx.get()); }
 
     const RenderPassCreateInfo& NuklearDevice::get_create_info() { return UiRenderpass::get_create_info(); }
 
@@ -184,9 +184,7 @@ namespace nova::bf {
         renderer.get_engine().update_descriptor_sets(writes);
     }
 
-    void NuklearDevice::init_nuklear() {
-        nk_init_default(&nk_ctx, nullptr);
-    }
+    void NuklearDevice::init_nuklear() { nk_init_default(nk_ctx.get(), nullptr); }
 
     void NuklearDevice::create_resources() {
         create_default_texture();
@@ -231,7 +229,7 @@ namespace nova::bf {
         retrieve_font_atlas();
 
         nk_font_atlas_end(nk_atlas, nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &default_texture->nk_null_tex);
-        nk_style_set_font(&nk_ctx, &font->handle);
+        nk_style_set_font(nk_ctx.get(), &font->handle);
 
         logger(rx::log::level::k_verbose, "Loaded font %s", FONT_PATH);
     }
@@ -482,7 +480,7 @@ namespace nova::bf {
         config.line_AA = NK_ANTI_ALIASING_ON;
 
         // vertex_buffer and index_buffer let Nuklear write vertex information directly
-        const auto result = nk_convert(&nk_ctx, &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
+        const auto result = nk_convert(nk_ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
         if(result != NK_CONVERT_SUCCESS) {
             logger(rx::log::level::k_error, "Could not convert Nuklear UI to mesh data: %s", to_string(result));
         }
@@ -547,7 +545,7 @@ namespace nova::bf {
 
         // Collect textures
         const nk_draw_command* cmd;
-        nk_draw_foreach(cmd, &nk_ctx, &nk_cmds) {
+        nk_draw_foreach(cmd, nk_ctx.get(), &nk_cmds) {
             if(cmd->elem_count == 0) {
                 continue;
             }
@@ -580,7 +578,7 @@ namespace nova::bf {
         rx::vector<NuklearVertex> vertices{frame_ctx.allocator, raw_vertices.size()};
 
         // Record drawcalls
-        nk_draw_foreach(cmd, &nk_ctx, &nk_cmds) {
+        nk_draw_foreach(cmd, nk_ctx.get(), &nk_cmds) {
             if(cmd->elem_count == 0) {
                 continue;
             }

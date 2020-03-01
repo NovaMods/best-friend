@@ -1,13 +1,12 @@
 #pragma once
 
 #include <nova_renderer/renderables.hpp>
+#include <nova_renderer/resource_loader.hpp>
 #include <nova_renderer/rhi/forward_decls.hpp>
 #include <nova_renderer/ui_renderer.hpp>
 #include <nova_renderer/util/container_accessor.hpp>
 #include <nuklear.h>
-
-#include "nova_renderer/resource_loader.hpp"
-#include "nova_renderer/util/auto_ptr.hpp"
+#include <rx/core/ptr.h>
 
 //! \brief Nuklear backend that renders Nuklear geometry with the Nova renderer
 //!
@@ -88,7 +87,7 @@ namespace nova {
                                               const rx::vector<renderer::rhi::RhiImage*>& current_descriptor_textures);
 
         private:
-            RaiiPtr<nk_context> nk_ctx;
+            rx::ptr<nk_context> nk_ctx;
 
             renderer::NovaRenderer& renderer;
 

@@ -4,7 +4,7 @@
 
 namespace nova::bf {
     void update_rotating_cameras(entt::registry& registry, renderer::NovaWindow& window) {
-        auto& view = registry.view<RotateAroundPointCameraController, Transform>();
+        const auto& view = registry.view<RotateAroundPointCameraController, Transform>();
 
         for(auto entity : view) {
             auto& rotate_data = registry.get<RotateAroundPointCameraController>(entity);
