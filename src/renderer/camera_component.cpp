@@ -2,9 +2,11 @@
 
 #include "camera_component.hpp"
 #include "../ec/transform.hpp"
+#include "minitrace.h"
 
 namespace nova::bf {
     void update_camera_positions(entt::registry& registry) {
+        MTR_SCOPE("BestFriend", "update_camera_positions");
         auto view = registry.view<Transform, CameraComponent>();
 
         for(auto entity : view) {

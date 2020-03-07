@@ -181,7 +181,7 @@ namespace nova::bf {
 
         rx::vector<RhiDescriptorSetWrite> writes{frame_ctx.allocator};
         writes.emplace_back(write);
-        renderer.get_engine().update_descriptor_sets(writes);
+        renderer.get_device().update_descriptor_sets(writes);
     }
 
     void NuklearDevice::init_nuklear() { nk_init_default(nk_ctx.get(), nullptr); }
@@ -372,7 +372,7 @@ namespace nova::bf {
     void NuklearDevice::save_framebuffer_size_ratio() { framebuffer_size_ratio = renderer.get_window().get_framebuffer_to_window_ratio(); }
 
     void NuklearDevice::create_descriptor_sets(const renderer::Pipeline& pipeline, const uint32_t frame_idx) {
-        auto& device = renderer.get_engine();
+        auto& device = renderer.get_device();
         if(pool == nullptr) {
             rx::map<DescriptorType, uint32_t> resource_counts;
             resource_counts.insert(DescriptorType::UniformBuffer, NUM_IN_FLIGHT_FRAMES);
@@ -501,7 +501,7 @@ namespace nova::bf {
         ui_matrix[0][0] /= window_size.x;
         ui_matrix[1][1] /= window_size.y;
 
-        frame_ctx.nova->get_engine().write_data_to_buffer(&ui_matrix[0][0], sizeof(glm::mat4), 0, ui_draw_params);
+        frame_ctx.nova->get_device().write_data_to_buffer(&ui_matrix[0][0], sizeof(glm::mat4), 0, ui_draw_params);
     }
 
     void NuklearDevice::render_ui(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {

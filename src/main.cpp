@@ -23,6 +23,7 @@ rx::global_group g_best_friend_group{BEST_FRIEND_GLOBALS_GROUP};
 RX_LOG("BestFriend", logger);
 
 void tick_polymorphic_components(entt::registry& registry, const double delta_time) {
+    MTR_SCOPE("BestFriend", "tick_polymorphic_components");
     const auto& view = registry.view<PolymorphicComponent>();
 
     for(auto entity : view) {
@@ -31,8 +32,6 @@ void tick_polymorphic_components(entt::registry& registry, const double delta_ti
     }
 }
 
-void process_input() {}
-
 int main(int argc, const char** argv) {
     init_rex();
 
@@ -40,7 +39,7 @@ int main(int argc, const char** argv) {
 #if NOVA_DEBUG
     settings.debug.enabled = true;
     settings.debug.enable_validation_layers = true;
-    settings.debug.enable_gpu_based_validation = true;
+    settings.debug.enable_gpu_based_validation = false;
 #endif
 
     settings.window.title = "Best Friend Train Viewer";
@@ -78,28 +77,33 @@ int main(int argc, const char** argv) {
     const auto camera = registry.create();
     registry.assign<Transform>(camera);
     registry.assign<CameraComponent>(camera, renderer.create_camera(create_info));
+    registry.assign<RotateAroundPointCameraController>(camera);
 
     const auto& window = renderer.get_window();
 
     auto frame_start_time = static_cast<double>(clock());
     auto frame_end_time = static_cast<double>(clock());
-    auto last_frame_duration = (frame_end_time - frame_start_time) / CLOCKS_PER_SEC;
+    auto last_frame_duration = (frame_end_time - frame_start_time) / static_cast<double>(CLOCKS_PER_SEC);
 
     // Number of frames since program start
     uint64_t frame_counter = 0;
 
     while(!window.should_close()) {
+        MTR_SCOPE("BestFriend", "main_loop");
         // Main loop!
 
         frame_start_time = static_cast<double>(clock());
 
         if(frame_counter % 100 == 0) {
-            logger(rx::log::level::k_info, "Frame %u took %fms", frame_counter, last_frame_duration * 1000);
+            logger(rx::log::level::k_info, "Frame %u took %fms", frame_counter, last_frame_duration * 1000.0);
         }
 
         window.poll_input();
 
         tick_polymorphic_components(registry, last_frame_duration);
+
+        router.update_rotating_entities(last_frame_duration);
+
         update_camera_positions(registry);
 
         update_renderable_transforms(registry, renderer);
@@ -107,7 +111,7 @@ int main(int argc, const char** argv) {
         renderer.execute_frame();
 
         frame_end_time = static_cast<double>(clock());
-        last_frame_duration = (frame_end_time - frame_start_time) / CLOCKS_PER_SEC;
+        last_frame_duration = (frame_end_time - frame_start_time) / static_cast<double>(CLOCKS_PER_SEC);
         frame_counter++;
     }
 

@@ -3,6 +3,7 @@
 #include <entt/entity/registry.hpp>
 #include <glm/vec3.hpp>
 #include <nova_renderer/window.hpp>
+#include <rx/core/map.h>
 
 namespace nova::bf {
     /*!
@@ -17,7 +18,7 @@ namespace nova::bf {
         /*!
          * \brief Distance from the focus point
          */
-        float distance{};
+        float distance{10};
 
         /*!
          * \brief Current yaw around the focus point, in degrees
@@ -37,10 +38,12 @@ namespace nova::bf {
     public:
         InputRouter(entt::registry& registry, renderer::NovaWindow& window);
 
-        void update_rotating_entities() const;
+        void update_rotating_entities(const double delta_time) const;
 
     private:
         entt::registry& registry;
         renderer::NovaWindow& window;
+
+        rx::map<uint32_t, bool> keys;
     };
 } // namespace nova::bf

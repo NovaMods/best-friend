@@ -4,6 +4,7 @@
 
 namespace nova::bf {
     void update_renderable_transforms(entt::registry& registry, renderer::NovaRenderer& renderer) {
+        MTR_SCOPE("BestFriend", "update_renderable_transforms");
         auto view = registry.view<RenderableComponent, Transform>();
 
         for(auto entity : view) {
