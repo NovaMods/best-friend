@@ -166,28 +166,6 @@ namespace nova::bf {
 
     const RenderPassCreateInfo& NuklearDevice::get_create_info() { return UiRenderpass::get_create_info(); }
 
-    void NuklearDevice::write_textures_to_descriptor(FrameContext& frame_ctx, const rx::vector<RhiImage*>& current_descriptor_textures) {
-        RhiDescriptorSetWrite write = {};
-        write.set = material_descriptors[frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES][UI_TEXTURES_DESCRIPTOR_SET];
-        write.binding = UI_TEXTURES_DESCRIPTOR_BINDING;
-        write.type = DescriptorType::Texture;
-        write.resources.reserve(current_descriptor_textures.size());
-
-        current_descriptor_textures.each_fwd([&](RhiImage* image) {
-            RhiDescriptorResourceInfo info = {};
-            info.image_info.image = image;
-            info.image_info.format.pixel_format = UI_ATLAS_FORMAT;
-            info.image_info.format.dimension_type = TextureDimensionType::Absolute;
-            info.image_info.format.width = UI_ATLAS_WIDTH;
-            info.image_info.format.height = UI_ATLAS_HEIGHT;
-            write.resources.emplace_back(info);
-        });
-
-        rx::vector<RhiDescriptorSetWrite> writes{frame_ctx.allocator};
-        writes.emplace_back(write);
-        renderer.get_device().update_descriptor_sets(writes);
-    }
-
     void NuklearDevice::init_nuklear() { nk_init_default(nk_ctx.get(), nullptr); }
 
     void NuklearDevice::create_resources() {
@@ -374,51 +352,6 @@ namespace nova::bf {
     }
 
     void NuklearDevice::save_framebuffer_size_ratio() { framebuffer_size_ratio = renderer.get_window().get_framebuffer_to_window_ratio(); }
-
-    void NuklearDevice::create_descriptor_sets(const renderer::Pipeline& pipeline, const uint32_t frame_idx) {
-        auto& device = renderer.get_device();
-        if(pool == nullptr) {
-            rx::map<DescriptorType, uint32_t> resource_counts;
-            resource_counts.insert(DescriptorType::UniformBuffer, NUM_IN_FLIGHT_FRAMES);
-            resource_counts.insert(DescriptorType::Texture, MAX_NUM_TEXTURES * NUM_IN_FLIGHT_FRAMES);
-            resource_counts.insert(DescriptorType::Sampler, NUM_IN_FLIGHT_FRAMES);
-            pool = device.create_descriptor_pool(resource_counts, allocator);
-        }
-
-        material_descriptors[frame_idx] = device.create_descriptor_sets(pipeline.pipeline_interface, pool, allocator);
-
-        // This is hardcoded and kinda gross, but so is my life
-        rx::vector<RhiDescriptorSetWrite> writes{&allocator};
-        writes.reserve(2);
-
-        {
-            RhiDescriptorSetWrite ui_params_write = {};
-            ui_params_write.set = material_descriptors[frame_idx][UI_UBO_DESCRIPTOR_SET];
-            ui_params_write.binding = UI_UBO_DESCRIPTOR_BINDING;
-            ui_params_write.type = DescriptorType::UniformBuffer;
-
-            RhiDescriptorResourceInfo resource_info;
-            resource_info.buffer_info.buffer = ui_draw_params;
-            ui_params_write.resources.emplace_back(resource_info);
-
-            writes.emplace_back(ui_params_write);
-        }
-
-        {
-            RhiDescriptorSetWrite sampler_write = {};
-            sampler_write.set = material_descriptors[frame_idx][UI_SAMPLER_DESCRIPTOR_SET];
-            sampler_write.binding = UI_SAMPLER_DESCRIPTOR_BINDING;
-            sampler_write.type = DescriptorType::Sampler;
-
-            RhiDescriptorResourceInfo resource_info;
-            resource_info.sampler_info.sampler = renderer.get_point_sampler();
-            sampler_write.resources.emplace_back(resource_info);
-
-            writes.emplace_back(sampler_write);
-        }
-
-        device.update_descriptor_sets(writes);
-    }
 
     rx::string to_string(const nk_flags flags) {
         // This performs all the allocations :(

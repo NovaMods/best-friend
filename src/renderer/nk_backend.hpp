@@ -83,9 +83,6 @@ namespace nova {
 
             static const renderer::renderpack::RenderPassCreateInfo& get_create_info();
 
-            void write_textures_to_descriptor(renderer::FrameContext& frame_ctx,
-                                              const rx::vector<renderer::rhi::RhiImage*>& current_descriptor_textures);
-
         private:
             rx::ptr<nk_context> nk_ctx;
 
@@ -149,8 +146,6 @@ namespace nova {
             void register_input_callbacks();
 
             void save_framebuffer_size_ratio();
-
-            void create_descriptor_sets(const renderer::Pipeline& pipeline, uint32_t frame_idx);
 
         protected:
             /*!

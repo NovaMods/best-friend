@@ -11,8 +11,6 @@
 
 RX_LOG("TrainLoad", logger);
 
-export module train_loading;
-
 namespace bve {
     template <typename ValueType>
     ValueType* begin(const CVector<ValueType>& vec) {
@@ -72,7 +70,7 @@ namespace nova::bf {
         return appended.substring(0, appended.size() - 2);
     }
 
-    export rx::optional<bve::Parsed_Static_Object> load_train_mesh(const rx::string& train_file_path) {
+    rx::optional<bve::Parsed_Static_Object> load_train_mesh(const rx::string& train_file_path) {
         MTR_SCOPE("load_train_mesh", "All");
 
         MTR_BEGIN("load_train_mesh", "ReadFile");
