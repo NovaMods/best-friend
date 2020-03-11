@@ -52,6 +52,10 @@ namespace nova::bf {
         uint32_t texture_id;
     };
 
+    struct NuklearUiMaterial {
+        TextureResourceAccessor texture;
+    };
+
     nk_buttons to_nk_mouse_button(uint32_t button);
 
     NuklearImage::NuklearImage(TextureResourceAccessor image, const struct nk_image nk_image)
@@ -507,7 +511,7 @@ namespace nova::bf {
     void NuklearDevice::render_ui(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
         const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
 
-        const auto pipeline = frame_ctx.nova->get_pipeline_storage().get_pipeline(UI_PIPELINE_NAME);
+       /* const auto pipeline = frame_ctx.nova->find_pipeline(UI_PIPELINE_NAME);
         if(!pipeline) {
             logger(rx::log::level::k_error, "Could not get pipeline %s from Nova's pipeline storage", UI_PIPELINE_NAME);
             return;
@@ -516,10 +520,10 @@ namespace nova::bf {
         if(material_descriptors[frame_idx].is_empty()) {
             create_descriptor_sets(*pipeline, static_cast<uint32_t>(frame_idx));
         }
+*/
+        //cmds.set_pipeline_state(pipeline->pipeline);
 
-        cmds.bind_pipeline(pipeline->pipeline);
-
-        cmds.bind_descriptor_sets(material_descriptors[frame_idx], pipeline->pipeline_interface);
+//        cmds.bind_descriptor_sets(material_descriptors[frame_idx], pipeline->pipeline_interface);
 
         const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
         rx::vector<RhiBuffer*> vertex_buffers;

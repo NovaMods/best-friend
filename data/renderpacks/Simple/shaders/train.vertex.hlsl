@@ -1,7 +1,5 @@
 struct PushConstants {
     uint camera_index;
-    uint material_index;
-    uint material_instance_index;
 };
 
 struct VsInput {
@@ -34,9 +32,9 @@ VsOutput main(VsInput input) {
     VsOutput output;
 
     Camera camera = camera_matrices.cameras[push_constants.camera_index];
-    float4x4 mvp = mul(camera.projection_matrix, camera.view_matrix);
+    float4x4 vp = mul(camera.view_matrix, camera.projection_matrix);
 
-    output.position = mul(float4(input.position, 1), mvp);
+    output.position = mul(float4(input.position, 1), vp);
     output.normal = input.normal;
 
     return output;

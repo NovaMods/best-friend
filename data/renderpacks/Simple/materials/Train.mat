@@ -4,7 +4,13 @@
     "passes": [
         {
             "name": "main",
-            "pipeline": "Train"
+            "pipeline": "Train",
+            "bindings": [
+                {
+                    "variable": "camera_matrices",
+                    "resource": "NovaCameraMatrixBuffer"
+                }
+            ]
         }
     ]
 }
