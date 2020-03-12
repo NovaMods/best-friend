@@ -398,7 +398,7 @@ namespace nova::bf {
              {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, NK_OFFSETOF(struct RawNuklearVertex, color)},
              {NK_VERTEX_LAYOUT_END}};
 
-        const auto frame_idx = static_cast<uint8_t>(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
+        const auto frame_idx = static_cast<uint8_t>(frame_ctx.frame_idx);
 
         nk_buffer_init_default(&nk_cmds);
         nk_buffer_init_fixed(&nk_vertex_buffer, raw_vertices.data(), MAX_VERTEX_BUFFER_SIZE);
@@ -442,23 +442,17 @@ namespace nova::bf {
     }
 
     void NuklearDevice::render_ui(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
-        const auto frame_idx = frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES;
+        const auto frame_idx = frame_ctx.frame_idx;
 
-       /* const auto pipeline = frame_ctx.nova->find_pipeline(UI_PIPELINE_NAME);
+        const auto pipeline = frame_ctx.nova->find_pipeline(UI_PIPELINE_NAME);
         if(!pipeline) {
             logger(rx::log::level::k_error, "Could not get pipeline %s from Nova's pipeline storage", UI_PIPELINE_NAME);
             return;
         }
 
-        if(material_descriptors[frame_idx].is_empty()) {
-            create_descriptor_sets(*pipeline, static_cast<uint32_t>(frame_idx));
-        }
-*/
-        //cmds.set_pipeline_state(pipeline->pipeline);
+        cmds.set_pipeline_state(pipeline->pipeline);
 
-//        cmds.bind_descriptor_sets(material_descriptors[frame_idx], pipeline->pipeline_interface);
-
-        const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_count % NUM_IN_FLIGHT_FRAMES);
+        const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_idx);
         rx::vector<RhiBuffer*> vertex_buffers;
         for(uint32_t i = 0; i < 4; i++) {
             vertex_buffers.push_back(vertex_buffer);
@@ -487,6 +481,8 @@ namespace nova::bf {
                 continue;
             }
 
+            // TODO: _dont_ write the textures themselves, but write materials that each draw can use to the material buffer, and those
+            // materials has the ID of the texture you need to use, and the textures already exist in the mega array so it's fine
             const int tex_index = cmd->texture.id;
             const auto* texture = textures.find(tex_index);
             if(texture != nullptr) {
@@ -503,7 +499,7 @@ namespace nova::bf {
             }
         }
         if(current_descriptor_textures.size() <= MAX_NUM_TEXTURES) {
-            write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
+            //  write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
 
         } else {
             logger(rx::log::level::k_error,

@@ -87,9 +87,12 @@ namespace nova::bf {
                 const auto renderable = renderer.add_renderable_for_material(pass_name, renderable_data);
                 logger(rx::log::level::k_verbose, "Added renderable %u", renderable);
 
+                const auto material = renderer.create_material<TrainMaterial>();
+                material.second->color_texture = 5; // TODO: Load the textures like a real boy
+
                 auto train_mesh_entity = registry.create();
                 registry.assign<Transform>(train_mesh_entity);
-                registry.assign<RenderableComponent>(train_mesh_entity, true, renderable);
+                registry.assign<RenderableComponent>(train_mesh_entity, true, renderable, material.first);
                 registry.assign<HierarchyMember>(train_mesh_entity, train_entity, rx::vector<entt::entity>{});
 
                 auto& train_hierarchy = registry.get<HierarchyMember>(train_entity);

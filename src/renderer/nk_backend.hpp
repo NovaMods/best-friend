@@ -111,16 +111,6 @@ namespace nova {
 
             glm::dvec2 most_recent_mouse_position{};
 
-            renderer::rhi::RhiDescriptorPool* pool = nullptr;
-
-            /*!
-             * \brief Descriptor sets for the UI material
-             *
-             * The UI material doesn't _actually_ exist, because rendering UI is hard, but if there was a real UI material, these
-             * descriptors would be for that
-             */
-            rx::array<rx::vector<renderer::rhi::RhiDescriptorSet*>[renderer::NUM_IN_FLIGHT_FRAMES]> material_descriptors;
-
             rx::map<int, renderer::TextureResourceAccessor> textures;
             uint32_t next_image_idx = 0;
 
