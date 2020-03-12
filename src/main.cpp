@@ -55,7 +55,7 @@ int main(int argc, const char** argv) {
 
     renderer.set_num_meshes(32); // Best guess, should fix when we know more
 
-    auto* nuklear_device = renderer.create_ui_renderpass<NuklearDevice>(&renderer);
+    auto* nuklear_device = renderer.create_ui_renderpass<NuklearUiPass>(&renderer);
 
     renderer.load_renderpack("Simple");
 

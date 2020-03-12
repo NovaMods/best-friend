@@ -66,7 +66,7 @@ namespace nova::bf {
                                              const nk_draw_null_texture null_tex)
         : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
 
-    NuklearDevice::NuklearDevice(NovaRenderer* renderer)
+    NuklearUiPass::NuklearUiPass(NovaRenderer* renderer)
         : nk_ctx{rx::make_ptr<nk_context>(&renderer->get_global_allocator())},
           renderer(*renderer),
           mesh(renderer->create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)),
@@ -90,7 +90,7 @@ namespace nova::bf {
         clear_context();
     }
 
-    NuklearDevice::~NuklearDevice() {
+    NuklearUiPass::~NuklearUiPass() {
         nk_buffer_free(&nk_cmds);
         nk_clear(nk_ctx.get());
 
@@ -99,9 +99,9 @@ namespace nova::bf {
         allocator.destroy<nk_font_atlas>(nk_atlas);
     }
 
-    nk_context* NuklearDevice::get_context() const { return nk_ctx.get(); }
+    nk_context* NuklearUiPass::get_context() const { return nk_ctx.get(); }
 
-    void NuklearDevice::consume_input() {
+    void NuklearUiPass::consume_input() {
         nk_input_begin(nk_ctx.get());
 
         // TODO: Handle people typing text
@@ -133,7 +133,7 @@ namespace nova::bf {
         nk_input_end(nk_ctx.get());
     }
 
-    rx::optional<NuklearImage> NuklearDevice::create_image_with_id(
+    rx::optional<NuklearImage> NuklearUiPass::create_image_with_id(
         const rx::string& name, const rx_size width, const rx_size height, const void* image_data, const uint32_t idx) {
 
         auto& resource_manager = renderer.get_resource_manager();
@@ -152,7 +152,7 @@ namespace nova::bf {
         }
     }
 
-    rx::optional<NuklearImage> NuklearDevice::create_image(const rx::string& name,
+    rx::optional<NuklearImage> NuklearUiPass::create_image(const rx::string& name,
                                                            const rx_size width,
                                                            const rx_size height,
                                                            const void* image_data) {
@@ -162,19 +162,19 @@ namespace nova::bf {
         return create_image_with_id(name, width, height, image_data, idx);
     }
 
-    void NuklearDevice::clear_context() const { nk_clear(nk_ctx.get()); }
+    void NuklearUiPass::clear_context() const { nk_clear(nk_ctx.get()); }
 
-    const RenderPassCreateInfo& NuklearDevice::get_create_info() { return UiRenderpass::get_create_info(); }
+    const RenderPassCreateInfo& NuklearUiPass::get_create_info() { return UiRenderpass::get_create_info(); }
 
-    void NuklearDevice::init_nuklear() { nk_init_default(nk_ctx.get(), nullptr); }
+    void NuklearUiPass::init_nuklear() { nk_init_default(nk_ctx.get(), nullptr); }
 
-    void NuklearDevice::create_resources() {
+    void NuklearUiPass::create_resources() {
         create_default_texture();
 
         create_ui_ubo();
     }
 
-    void NuklearDevice::create_default_texture() {
+    void NuklearUiPass::create_default_texture() {
         rx::vector<uint8_t> default_img_data{&allocator, 8 * 8 * 4};
         default_img_data.each_fwd([](uint8_t& elem) { elem = 0xFF; }); // Set the whole texture to white
 
@@ -187,7 +187,7 @@ namespace nova::bf {
         }
     }
 
-    void NuklearDevice::create_ui_ubo() {
+    void NuklearUiPass::create_ui_ubo() {
         auto& resource_manager = renderer.get_resource_manager();
         if(const auto buffer = resource_manager.create_uniform_buffer(UI_UBO_NAME, sizeof(glm::mat4)); buffer) {
             ui_draw_params = (*buffer)->buffer;
@@ -197,7 +197,7 @@ namespace nova::bf {
         }
     }
 
-    void NuklearDevice::load_font() {
+    void NuklearUiPass::load_font() {
         nk_atlas = allocator.create<nk_font_atlas>();
         nk_font_atlas_init_default(nk_atlas);
         nk_font_atlas_begin(nk_atlas);
@@ -216,7 +216,7 @@ namespace nova::bf {
         logger(rx::log::level::k_verbose, "Loaded font %s", FONT_PATH);
     }
 
-    void NuklearDevice::retrieve_font_atlas() {
+    void NuklearUiPass::retrieve_font_atlas() {
         int width, height;
         const void* image_data = nk_font_atlas_bake(nk_atlas, &width, &height, NK_FONT_ATLAS_RGBA32);
 
@@ -233,7 +233,7 @@ namespace nova::bf {
         }
     }
 
-    void NuklearDevice::register_input_callbacks() {
+    void NuklearUiPass::register_input_callbacks() {
         auto& window = renderer.get_window();
         window.register_key_callback([&](const auto& key, const bool is_press, const bool is_control_down, const bool /* is_shift_down */) {
             rx::concurrency::scope_lock l(key_buffer_mutex);
@@ -351,7 +351,7 @@ namespace nova::bf {
         });
     }
 
-    void NuklearDevice::save_framebuffer_size_ratio() { framebuffer_size_ratio = renderer.get_window().get_framebuffer_to_window_ratio(); }
+    void NuklearUiPass::save_framebuffer_size_ratio() { framebuffer_size_ratio = renderer.get_window().get_framebuffer_to_window_ratio(); }
 
     rx::string to_string(const nk_flags flags) {
         // This performs all the allocations :(
@@ -391,7 +391,7 @@ namespace nova::bf {
                                   buffer.size);
     }
 
-    void NuklearDevice::setup_renderpass(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
+    void NuklearUiPass::setup_renderpass(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
         static const nk_draw_vertex_layout_element VERTEX_LAYOUT[] =
             {{NK_VERTEX_POSITION, NK_FORMAT_FLOAT, NK_OFFSETOF(struct RawNuklearVertex, position)},
              {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, NK_OFFSETOF(struct RawNuklearVertex, uv)},
@@ -441,9 +441,10 @@ namespace nova::bf {
         frame_ctx.nova->get_device().write_data_to_buffer(&ui_matrix[0][0], sizeof(glm::mat4), 0, ui_draw_params);
     }
 
-    void NuklearDevice::render_ui(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
+    void NuklearUiPass::render_ui(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
         const auto frame_idx = frame_ctx.frame_idx;
 
+        // Pipeline state should have been loaded from the renderpack
         const auto pipeline = frame_ctx.nova->find_pipeline(UI_PIPELINE_NAME);
         if(!pipeline) {
             logger(rx::log::level::k_error, "Could not get pipeline %s from Nova's pipeline storage", UI_PIPELINE_NAME);

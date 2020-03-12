@@ -60,11 +60,11 @@ namespace nova {
         /*!
          * \brief Renders the Nuklear UI
          */
-        class NuklearDevice final : public renderer::UiRenderpass {
+        class NuklearUiPass final : public renderer::UiRenderpass {
         public:
-            explicit NuklearDevice(renderer::NovaRenderer* renderer);
+            explicit NuklearUiPass(renderer::NovaRenderer* renderer);
 
-            ~NuklearDevice();
+            ~NuklearUiPass();
 
             [[nodiscard]] nk_context* get_context() const;
 
