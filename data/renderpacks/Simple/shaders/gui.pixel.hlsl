@@ -22,17 +22,13 @@ struct StandardPushConstants {
  * \brief Array of all the materials 
  */
 [[vk::binding(0, 0)]]
-cbuffer cameras : register (b0) {
-    Camera camears[256];
-};
+StructuredBuffer<Camera[256]> cameras : register (b0);
 
 /*!
  * \brief Array of all the materials 
  */
 [[vk::binding(1, 0)]]
-cbuffer material_buffer : register (b1) {
-    UiMaterial materials[64];
-};
+StructuredBuffer<UiMaterial[64]> material_buffer : register (b1);
 
 /*!
  * \brief Point sampler you can use to sample any texture
