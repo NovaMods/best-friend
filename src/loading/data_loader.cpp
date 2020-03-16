@@ -88,7 +88,7 @@ namespace nova::bf {
                 logger(rx::log::level::k_verbose, "Added renderable %u", renderable);
 
                 const auto material = renderer.create_material<TrainMaterial>();
-                material.second->color_texture = 5; // TODO: Load the textures like a real boy
+                material.second->color_texture = 0; // TODO: Load the textures like a real boy
 
                 auto train_mesh_entity = registry.create();
                 registry.assign<Transform>(train_mesh_entity);
