@@ -37,7 +37,7 @@ namespace nova::bf {
         auto train = load_train_mesh(event.filepath);
         if(train) {
             MTR_SCOPE("DataLoader::load_train", "SendTrainToGpu");
-            logger(rx::log::level::k_verbose, "This chimera didn't explode");
+            logger->verbose("This chimera didn't explode");
 
             auto train_entity = registry.create();
             registry.assign<Transform>(train_entity);
@@ -48,10 +48,7 @@ namespace nova::bf {
             for(uint32_t i = 0; i < train_meshes.count; i++) {
                 const auto train_mesh = train_meshes.ptr[i];
 
-                logger(rx::log::level::k_verbose,
-                       "Processing a mesh with %u vertices and %u indices",
-                       train_mesh.vertices.count,
-                       train_mesh.indices.count);
+                logger->verbose("Processing a mesh with %u vertices and %u indices", train_mesh.vertices.count, train_mesh.indices.count);
 
                 // TODO: Figure out a cleaner way to handle this
 
@@ -78,14 +75,14 @@ namespace nova::bf {
                                              indices.size() * sizeof(uint32_t)};
 
                 const auto mesh = renderer.create_mesh(mesh_data);
-                logger(rx::log::level::k_verbose, "Added mesh %u", mesh);
+                logger->verbose("Added mesh %u", mesh);
 
                 renderer::StaticMeshRenderableCreateInfo renderable_data{};
                 renderable_data.mesh = mesh;
                 renderable_data.scale = glm::vec3{0.01};
 
                 const auto renderable = renderer.add_renderable_for_material(pass_name, renderable_data);
-                logger(rx::log::level::k_verbose, "Added renderable %u", renderable);
+                logger->verbose("Added renderable %u", renderable);
 
                 const auto material = renderer.create_material<TrainMaterial>();
                 material.second->color_texture = 0; // TODO: Load the textures like a real boy

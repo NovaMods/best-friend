@@ -33,7 +33,7 @@ namespace nova::bf::ui {
             nk_label(ctx, selected_train_label.data(), NK_TEXT_LEFT);
 
             if(nk_button_label(ctx, "Choose train file")) {
-                logger(rx::log::level::k_verbose, "Clicked choose train button");
+                logger->verbose("Clicked choose train button");
 
                 last_loaded_train = BEST_FRIEND_DATA_DIR "/trains/R46 2014 (8 Car)/Cars/Body/BodyA.b3d";
                 g_ui_event_bus->trigger<LoadTrainEvent>(last_loaded_train);

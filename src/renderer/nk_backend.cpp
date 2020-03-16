@@ -26,6 +26,8 @@ namespace nova::bf {
 
     constexpr const char* UI_UBO_NAME = "BestFriendUiUbo";
 
+    constexpr const char* UI_CAMERA_NAME = "UI Camera";
+
     constexpr uint32_t UI_UBO_DESCRIPTOR_SET = 0;
     constexpr uint32_t UI_UBO_DESCRIPTOR_BINDING = 0;
 
@@ -88,6 +90,11 @@ namespace nova::bf {
         save_framebuffer_size_ratio();
 
         clear_context();
+
+        CameraCreateInfo info = {};
+        info.name = UI_CAMERA_NAME;
+        info.field_of_view = 0;
+        ui_camera = renderer->create_camera(info);
     }
 
     NuklearUiPass::~NuklearUiPass() {
@@ -146,7 +153,7 @@ namespace nova::bf {
             return NuklearImage{*image, nk_image};
 
         } else {
-            logger(rx::log::level::k_error, "Could not create UI image %s", name);
+            logger->error("Could not create UI image %s", name);
 
             return rx::nullopt;
         }
@@ -183,7 +190,7 @@ namespace nova::bf {
             default_texture = allocator.create<DefaultNuklearImage>(default_image->image, default_image->nk_image);
 
         } else {
-            logger(rx::log::level::k_error, "Could not create null texture");
+            logger->error("Could not create null texture");
         }
     }
 
@@ -193,7 +200,7 @@ namespace nova::bf {
             ui_draw_params = (*buffer)->buffer;
 
         } else {
-            logger(rx::log::level::k_error, "Could not create UI UBO");
+            logger->error("Could not create UI UBO");
         }
     }
 
@@ -204,7 +211,7 @@ namespace nova::bf {
 
         font = nk_font_atlas_add_from_file(nk_atlas, FONT_PATH, 14, nullptr);
         if(!font) {
-            logger(rx::log::level::k_error, "Could not load font %s", FONT_PATH);
+            logger->error("Could not load font %s", FONT_PATH);
             return;
         }
 
@@ -213,7 +220,7 @@ namespace nova::bf {
         nk_font_atlas_end(nk_atlas, nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &default_texture->nk_null_tex);
         nk_style_set_font(nk_ctx.get(), &font->handle);
 
-        logger(rx::log::level::k_verbose, "Loaded font %s", FONT_PATH);
+        logger->verbose("Loaded font %s", FONT_PATH);
     }
 
     void NuklearUiPass::retrieve_font_atlas() {
@@ -229,7 +236,7 @@ namespace nova::bf {
             font_image = allocator.create<NuklearImage>(new_font_atlas->image, new_font_atlas->nk_image);
 
         } else {
-            logger(rx::log::level::k_error, "Could not create font atlas texture");
+            logger->error("Could not create font atlas texture");
         }
     }
 
@@ -419,7 +426,7 @@ namespace nova::bf {
         // vertex_buffer and index_buffer let Nuklear write vertex information directly
         const auto result = nk_convert(nk_ctx.get(), &nk_cmds, &nk_vertex_buffer, &nk_index_buffer, &config);
         if(result != NK_CONVERT_SUCCESS) {
-            logger(rx::log::level::k_error, "Could not convert Nuklear UI to mesh data: %s", to_string(result));
+            logger->error("Could not convert Nuklear UI to mesh data: %s", to_string(result));
         }
 
         // Record the commands to upload the mesh data now, so they're before the renderpass commands in the command list
@@ -447,9 +454,11 @@ namespace nova::bf {
         // Pipeline state should have been loaded from the renderpack
         const auto pipeline = frame_ctx.nova->find_pipeline(UI_PIPELINE_NAME);
         if(!pipeline) {
-            logger(rx::log::level::k_error, "Could not get pipeline %s from Nova's pipeline storage", UI_PIPELINE_NAME);
+            logger->error("Could not get pipeline %s from Nova's pipeline storage", UI_PIPELINE_NAME);
             return;
         }
+
+        cmds.set_camera(*ui_camera);
 
         cmds.set_pipeline_state(pipeline->pipeline);
 
@@ -496,17 +505,14 @@ namespace nova::bf {
                     // TODO: Figure out how to get the texture IDs into vertex data so that we can actually use them
                 }
             } else {
-                logger(rx::log::level::k_verbose, "No entry for Nuklear texture %u", tex_index);
+                logger->verbose("No entry for Nuklear texture %u", tex_index);
             }
         }
         if(current_descriptor_textures.size() <= MAX_NUM_TEXTURES) {
             //  write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
 
         } else {
-            logger(rx::log::level::k_error,
-                   "Using %u textures, but the maximum allowed is %u",
-                   current_descriptor_textures.size(),
-                   MAX_NUM_TEXTURES);
+            logger->error("Using %u textures, but the maximum allowed is %u", current_descriptor_textures.size(), MAX_NUM_TEXTURES);
         }
 
         rx::vector<NuklearVertex> vertices{frame_ctx.allocator, raw_vertices.size()};
@@ -531,7 +537,7 @@ namespace nova::bf {
             // Copy data into the vector of real vertices, adding in the texture ID
             for(uint32_t i = offset; i < offset + cmd->elem_count; i++) {
                 const auto raw_vertex = raw_vertices[i];
-                const auto tex_idx = *nk_tex_id_to_descriptor_idx.find(cmd->texture.id);
+                const auto tex_idx =0;// *nk_tex_id_to_descriptor_idx.find(cmd->texture.id);
 
                 vertices[i] = NuklearVertex{raw_vertex.position, raw_vertex.uv, raw_vertex.color, tex_idx};
             }
@@ -543,7 +549,7 @@ namespace nova::bf {
         mesh->set_index_data(indices.data(), indices.size() * sizeof(uint16_t));
 
         if(num_sets_used > 1) {
-            logger(rx::log::level::k_info, "Used %u descriptor sets. Maybe you should only use one", num_sets_used);
+            logger->info("Used %u descriptor sets. Maybe you should only use one", num_sets_used);
         }
 
         clear_context();

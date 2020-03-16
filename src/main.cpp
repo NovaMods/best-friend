@@ -95,7 +95,7 @@ int main(int argc, const char** argv) {
         frame_start_time = static_cast<double>(clock());
 
         if(frame_counter % 100 == 0) {
-            logger(rx::log::level::k_info, "Frame %u took %fms", frame_counter, last_frame_duration * 1000.0);
+            logger->info("Frame %u took %fms", frame_counter, last_frame_duration * 1000.0);
         }
 
         window.poll_input();
@@ -115,7 +115,7 @@ int main(int argc, const char** argv) {
         frame_counter++;
     }
 
-    logger(rx::log::level::k_warning, "REMAIN INDOORS");
+    logger->warning("REMAIN INDOORS");
 
     return 0;
 }

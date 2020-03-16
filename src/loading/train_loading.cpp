@@ -87,23 +87,23 @@ namespace nova::bf {
 
             if(train.errors.count > 0) {
                 const rx::string errors = append_bve_messages(train.errors);
-                logger(rx::log::level::k_error, "Could not load train %s: %s", train_file_path, errors);
+                logger->error("Could not load train %s: %s", train_file_path, errors);
 
                 return rx::nullopt;
 
             } else if(train.warnings.count > 0) {
                 const auto& warnings = append_bve_messages(train.warnings);
-                logger(rx::log::level::k_warning, "Encountered warnings while loading train %s: %s", train_file_path, warnings);
+                logger->warning("Encountered warnings while loading train %s: %s", train_file_path, warnings);
 
-                logger(rx::log::level::k_info, "Loaded train %s", train_file_path);
+                logger->info("Loaded train %s", train_file_path);
                 return train;
 
             } else {
-                logger(rx::log::level::k_info, "Loaded train %s", train_file_path);
+                logger->info("Loaded train %s", train_file_path);
                 return train;
             }
         } else {
-            logger(rx::log::level::k_error, "Could not read train file %s", train_file_path);
+            logger->error("Could not read train file %s", train_file_path);
 
             return rx::nullopt;
         }

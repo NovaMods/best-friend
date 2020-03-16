@@ -21,8 +21,10 @@ struct VsOutput {
 VsOutput main(VsInput input) {
     VsOutput output;
 
+    Camera camera = cameras.Load(constants.camera_index);
+
     float4 position = float4(input.position, 0, 1);
-   // output.position = mul(position, constants.view_matrix);
+    output.position = mul(position, camera.view);
 
     output.uv = input.uv;
 

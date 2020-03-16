@@ -6,7 +6,10 @@
 #include <nova_renderer/ui_renderer.hpp>
 #include <nova_renderer/util/container_accessor.hpp>
 #include <nuklear.h>
+#include <rx/core/concurrency/mutex.h>
 #include <rx/core/ptr.h>
+
+#include "nova_renderer/camera.hpp"
 
 //! \brief Nuklear backend that renders Nuklear geometry with the Nova renderer
 //!
@@ -113,6 +116,8 @@ namespace nova {
 
             rx::map<int, renderer::TextureResourceAccessor> textures;
             uint32_t next_image_idx = 0;
+
+            renderer::CameraAccessor ui_camera;
 
             nk_font_atlas* nk_atlas;
             DefaultNuklearImage* default_texture;
