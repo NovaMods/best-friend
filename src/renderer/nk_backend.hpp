@@ -142,6 +142,8 @@ namespace nova {
 
             void save_framebuffer_size_ratio();
 
+            void create_ui_camera();
+
         protected:
             /*!
              * \brief Uploads vertex data for this frame's UI

@@ -91,10 +91,7 @@ namespace nova::bf {
 
         clear_context();
 
-        CameraCreateInfo info = {};
-        info.name = UI_CAMERA_NAME;
-        info.field_of_view = 0;
-        ui_camera = renderer->create_camera(info);
+        create_ui_camera();
     }
 
     NuklearUiPass::~NuklearUiPass() {
@@ -170,6 +167,15 @@ namespace nova::bf {
     }
 
     void NuklearUiPass::clear_context() const { nk_clear(nk_ctx.get()); }
+
+    void NuklearUiPass::create_ui_camera() {
+        CameraCreateInfo info = {};
+        info.name = UI_CAMERA_NAME;
+        info.field_of_view = 0;
+        ui_camera = renderer.create_camera(info);
+
+        logger->verbose("UI camera has index %u", ui_camera->index);
+    }
 
     const RenderPassCreateInfo& NuklearUiPass::get_create_info() { return UiRenderpass::get_create_info(); }
 
@@ -445,7 +451,7 @@ namespace nova::bf {
         ui_matrix[0][0] /= window_size.x;
         ui_matrix[1][1] /= window_size.y;
 
-        frame_ctx.nova->get_device().write_data_to_buffer(&ui_matrix[0][0], sizeof(glm::mat4), 0, ui_draw_params);
+        frame_ctx.nova->get_device().write_data_to_buffer(&ui_matrix[0][0], sizeof(glm::mat4), ui_draw_params);
     }
 
     void NuklearUiPass::render_ui(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
