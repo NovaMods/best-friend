@@ -489,8 +489,6 @@ namespace nova::bf {
             material->texture = tex_index;
             cmds.set_material_index(idx);
 
-            logger->verbose("UI Material %u uses texture index %u", idx, tex_index);
-
             // Save the material we just used so we can free it and use it next frame
             used_materials.push_back({idx, material});
 

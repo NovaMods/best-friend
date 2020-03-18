@@ -11,6 +11,7 @@
         "malloc",
         "nullptr",
         "preprocesses",
+        "renderpack",
         "spir",
         "struct",
         "uint",
