@@ -54,10 +54,6 @@ namespace nova::bf {
         uint32_t texture_id;
     };
 
-    struct NuklearUiMaterial {
-        TextureResourceAccessor texture;
-    };
-
     nk_buttons to_nk_mouse_button(uint32_t button);
 
     NuklearImage::NuklearImage(TextureResourceAccessor image, const struct nk_image nk_image)
@@ -72,7 +68,8 @@ namespace nova::bf {
         : nk_ctx{rx::make_ptr<nk_context>(&renderer->get_global_allocator())},
           renderer(*renderer),
           mesh(renderer->create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)),
-          allocator{renderer->get_global_allocator()} {
+          allocator{renderer->get_global_allocator()},
+          materials{&allocator} {
 
         name = UI_RENDER_PASS_NAME;
 
@@ -137,15 +134,17 @@ namespace nova::bf {
         nk_input_end(nk_ctx.get());
     }
 
-    rx::optional<NuklearImage> NuklearUiPass::create_image_with_id(
-        const rx::string& name, const rx_size width, const rx_size height, const void* image_data, const uint32_t idx) {
-
+    rx::optional<NuklearImage> NuklearUiPass::create_image(const rx::string& name,
+                                                           const rx_size width,
+                                                           const rx_size height,
+                                                           const void* image_data) {
         auto& resource_manager = renderer.get_resource_manager();
         auto image = resource_manager.create_texture(name, width, height, PixelFormat::Rgba8, image_data, allocator);
         if(image) {
-            textures.insert(idx, *image);
+            const auto texture_id = resource_manager.get_texture_idx_for_name(name);
+            logger->verbose("Texture %s was created with ID %u", name, texture_id);
 
-            const struct nk_image nk_image = nk_image_id(static_cast<int>(idx));
+            const struct nk_image nk_image = nk_image_id(static_cast<int>(*texture_id));
 
             return NuklearImage{*image, nk_image};
 
@@ -154,16 +153,6 @@ namespace nova::bf {
 
             return rx::nullopt;
         }
-    }
-
-    rx::optional<NuklearImage> NuklearUiPass::create_image(const rx::string& name,
-                                                           const rx_size width,
-                                                           const rx_size height,
-                                                           const void* image_data) {
-        const auto idx = next_image_idx;
-        next_image_idx++;
-
-        return create_image_with_id(name, width, height, image_data, idx);
     }
 
     void NuklearUiPass::clear_context() const { nk_clear(nk_ctx.get()); }
@@ -223,7 +212,10 @@ namespace nova::bf {
 
         retrieve_font_atlas();
 
-        nk_font_atlas_end(nk_atlas, nk_handle_id(static_cast<int>(ImageId::FontAtlas)), &default_texture->nk_null_tex);
+        const auto& resource_manager = renderer.get_resource_manager();
+        const auto font_texture_id = resource_manager.get_texture_idx_for_name(FONT_ATLAS_NAME);
+
+        nk_font_atlas_end(nk_atlas, nk_handle_id(static_cast<int>(*font_texture_id)), &default_texture->nk_null_tex);
         nk_style_set_font(nk_ctx.get(), &font->handle);
 
         logger->verbose("Loaded font %s", FONT_PATH);
@@ -233,11 +225,7 @@ namespace nova::bf {
         int width, height;
         const void* image_data = nk_font_atlas_bake(nk_atlas, &width, &height, NK_FONT_ATLAS_RGBA32);
 
-        const auto new_font_atlas = create_image_with_id(FONT_ATLAS_NAME,
-                                                         width,
-                                                         height,
-                                                         image_data,
-                                                         static_cast<uint32_t>(ImageId::FontAtlas));
+        const auto new_font_atlas = create_image(FONT_ATLAS_NAME, width, height, image_data);
         if(new_font_atlas) {
             font_image = allocator.create<NuklearImage>(new_font_atlas->image, new_font_atlas->nk_image);
 
@@ -484,50 +472,27 @@ namespace nova::bf {
         uint32_t num_sets_used = 0;
         uint32_t offset = 0;
 
-        // Two passes through the draw commands: one to collect the textures we'll need, one to issue the drawcalls. This lets us update the
-        // texture descriptors before they're bound to the command list, because I don't want to figure out how to turn on update-after-bind
-        // just yet
+        rx::vector<NuklearVertex> vertices{frame_ctx.allocator, raw_vertices.size()};
+        rx::vector<rx::pair<uint32_t, NuklearUiMaterial*>> used_materials{frame_ctx.allocator};
 
-        rx::map<int, uint32_t> nk_tex_id_to_descriptor_idx{frame_ctx.allocator};
-
-        // Collect textures
+        // Record drawcalls
         const nk_draw_command* cmd;
         nk_draw_foreach(cmd, nk_ctx.get(), &nk_cmds) {
             if(cmd->elem_count == 0) {
                 continue;
             }
 
-            // TODO: _dont_ write the textures themselves, but write materials that each draw can use to the material buffer, and those
-            // materials has the ID of the texture you need to use, and the textures already exist in the mega array so it's fine
             const int tex_index = cmd->texture.id;
-            const auto* texture = textures.find(tex_index);
-            if(texture != nullptr) {
-                const auto img = (*texture)->image;
-                if(current_descriptor_textures.find(img) == rx::vector<RhiImage*>::k_npos) {
-                    const auto descriptor_idx = current_descriptor_textures.size();
-                    current_descriptor_textures.emplace_back((*texture)->image);
-                    nk_tex_id_to_descriptor_idx.insert(tex_index, static_cast<uint32_t>(descriptor_idx));
 
-                    // TODO: Figure out how to get the texture IDs into vertex data so that we can actually use them
-                }
-            } else {
-                logger->verbose("No entry for Nuklear texture %u", tex_index);
-            }
-        }
-        if(current_descriptor_textures.size() <= MAX_NUM_TEXTURES) {
-            //  write_textures_to_descriptor(frame_ctx, current_descriptor_textures);
+            auto [idx, material] = get_next_material();
 
-        } else {
-            logger->error("Using %u textures, but the maximum allowed is %u", current_descriptor_textures.size(), MAX_NUM_TEXTURES);
-        }
+            material->texture = tex_index;
+            cmds.set_material_index(idx);
 
-        rx::vector<NuklearVertex> vertices{frame_ctx.allocator, raw_vertices.size()};
+            logger->verbose("UI Material %u uses texture index %u", idx, tex_index);
 
-        // Record drawcalls
-        nk_draw_foreach(cmd, nk_ctx.get(), &nk_cmds) {
-            if(cmd->elem_count == 0) {
-                continue;
-            }
+            // Save the material we just used so we can free it and use it next frame
+            used_materials.push_back({idx, material});
 
             const auto scissor_rect_x = static_cast<uint32_t>(rx::algorithm::max(0.0f, round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
             const auto scissor_rect_y = static_cast<uint32_t>(rx::algorithm::max(0.0f, round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
@@ -543,7 +508,7 @@ namespace nova::bf {
             // Copy data into the vector of real vertices, adding in the texture ID
             for(uint32_t i = offset; i < offset + cmd->elem_count; i++) {
                 const auto raw_vertex = raw_vertices[i];
-                const auto tex_idx =0;// *nk_tex_id_to_descriptor_idx.find(cmd->texture.id);
+                const auto tex_idx = 0; // *nk_tex_id_to_descriptor_idx.find(cmd->texture.id);
 
                 vertices[i] = NuklearVertex{raw_vertex.position, raw_vertex.uv, raw_vertex.color, tex_idx};
             }
@@ -558,9 +523,24 @@ namespace nova::bf {
             logger->info("Used %u descriptor sets. Maybe you should only use one", num_sets_used);
         }
 
+        materials += used_materials;
+        used_materials.clear();
+
         clear_context();
 
         consume_input();
+    }
+
+    rx::pair<uint32_t, NuklearUiMaterial*> NuklearUiPass::get_next_material() {
+        if(materials.is_empty()) {
+            return renderer.create_material<NuklearUiMaterial>();
+
+        } else {
+            const auto ret_val = materials.last();
+            materials.pop_back();
+
+            return ret_val;
+        }
     }
 
     nk_buttons to_nk_mouse_button(const uint32_t button) {

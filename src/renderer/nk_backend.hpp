@@ -24,6 +24,11 @@ namespace nova {
     } // namespace renderer
 
     namespace bf {
+
+        struct NuklearUiMaterial {
+            uint32_t texture;
+        };
+
         struct NuklearImage {
             renderer::TextureResourceAccessor image;
 
@@ -53,13 +58,6 @@ namespace nova {
             uint32_t texture_idx;
         };
 
-        enum class ImageId {
-            Default,
-            FontAtlas,
-
-            Count, // Must always be last
-        };
-
         /*!
          * \brief Renders the Nuklear UI
          */
@@ -75,8 +73,7 @@ namespace nova {
              * \brief Begins a frame by doing things like input handling
              */
             void consume_input();
-            rx::optional<NuklearImage> create_image_with_id(
-                const rx::string& name, rx_size width, rx_size height, const void* image_data, uint32_t idx);
+
             [[nodiscard]] rx::optional<NuklearImage> create_image(const rx::string& name,
                                                                   rx_size width,
                                                                   rx_size height,
@@ -114,7 +111,6 @@ namespace nova {
 
             glm::dvec2 most_recent_mouse_position{};
 
-            rx::map<int, renderer::TextureResourceAccessor> textures;
             uint32_t next_image_idx = 0;
 
             renderer::CameraAccessor ui_camera;
@@ -125,6 +121,8 @@ namespace nova {
             nk_font* font{};
 
             rx::memory::allocator& allocator;
+
+            rx::vector<rx::pair<uint32_t, NuklearUiMaterial*>> materials;
 
             void init_nuklear();
 
@@ -143,6 +141,8 @@ namespace nova {
             void save_framebuffer_size_ratio();
 
             void create_ui_camera();
+
+            [[nodiscard]] rx::pair<uint32_t, NuklearUiMaterial*> get_next_material();
 
         protected:
             /*!
