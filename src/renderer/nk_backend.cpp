@@ -454,7 +454,7 @@ namespace nova::bf {
 
         cmds.set_camera(*ui_camera);
 
-        cmds.set_pipeline_state(pipeline->pipeline);
+        cmds.set_pipeline(*pipeline->pipeline);
 
         const auto& [vertex_buffer, index_buffer] = mesh->get_buffers_for_frame(frame_ctx.frame_idx);
         rx::vector<RhiBuffer*> vertex_buffers;
