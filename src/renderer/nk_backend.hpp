@@ -34,14 +34,14 @@ namespace nova {
 
             struct nk_image nk_image;
 
-            explicit NuklearImage(renderer::TextureResourceAccessor image, struct nk_image nk_image = {});
+            explicit NuklearImage(renderer::TextureResourceAccessor image_in, struct nk_image nk_image_in = {});
         };
 
         struct DefaultNuklearImage : NuklearImage {
             nk_draw_null_texture nk_null_tex = {};
 
-            explicit DefaultNuklearImage(const renderer::TextureResourceAccessor& image,
-                                         struct nk_image nk_image = {},
+            explicit DefaultNuklearImage(const renderer::TextureResourceAccessor& image_in,
+                                         struct nk_image nk_image_in = {},
                                          nk_draw_null_texture null_tex = {});
         };
 
@@ -63,7 +63,7 @@ namespace nova {
          */
         class NuklearUiPass final : public renderer::UiRenderpass {
         public:
-            explicit NuklearUiPass(renderer::NovaRenderer* renderer);
+            explicit NuklearUiPass(renderer::NovaRenderer* renderer_in);
 
             ~NuklearUiPass();
 
@@ -90,7 +90,7 @@ namespace nova {
 
             glm::vec2 framebuffer_size_ratio{};
 
-            renderer::rhi::RhiBuffer* ui_draw_params = nullptr;
+            rx::ptr<renderer::rhi::RhiBuffer> ui_draw_params;
 
             nk_buffer nk_cmds{};
 

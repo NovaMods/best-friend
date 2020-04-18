@@ -13,9 +13,9 @@ namespace nova::bf {
 
     class DataLoader {
     public:
-        DataLoader(entt::registry& world, renderer::NovaRenderer& renderer);
+        DataLoader(entt::registry& world, renderer::NovaRenderer& renderer_in);
 
-        void load_train(const LoadTrainEvent& event);
+        void load_train(const LoadTrainEvent& event) const;
 
     private:
         entt::registry& registry;

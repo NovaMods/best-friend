@@ -21,6 +21,6 @@ float4 main(VsOutput input) : SV_Target {
     
     float4 vertex_color = float4(red, green, blue, alpha) / 255.0f;
 
-    float4 texture_color = textures[material.texture_idx].Sample(point_sampler, input.uv);
+    float4 texture_color = textures[NonUniformResourceIndex(material.texture_idx)].Sample(point_sampler, input.uv);
     return vertex_color * texture_color;
 }

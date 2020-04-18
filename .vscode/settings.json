@@ -2,8 +2,10 @@
     "cmake.configureOnOpen": true,
     "cSpell.words": [
         "alloc",
+        "directory",
         "drawcall",
         "drawcalls",
+        "fspv",
         "gpus",
         "hlsl",
         "info",
@@ -13,6 +15,7 @@
         "preprocesses",
         "renderpack",
         "spir",
+        "spirv",
         "struct",
         "uint",
         "vulkan"

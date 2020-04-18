@@ -42,7 +42,6 @@ namespace nova::bf {
 
     private:
         entt::registry& registry;
-        renderer::NovaWindow& window;
 
         rx::map<uint32_t, bool> keys;
     };

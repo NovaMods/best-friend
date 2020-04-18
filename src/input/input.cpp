@@ -11,7 +11,7 @@ namespace nova::bf {
 
     constexpr double ZOOM_SPEED = 1;
 
-    InputRouter::InputRouter(entt::registry& registry, renderer::NovaWindow& window) : registry{registry}, window{window} {
+    InputRouter::InputRouter(entt::registry& registry, renderer::NovaWindow& window) : registry{registry} {
         window.register_key_callback(
             [&](const uint32_t key, const bool is_press, const bool /* is_control_down */, const bool /* is_shift_down */) {
                 if(auto* val = keys.find(key); val != nullptr) {

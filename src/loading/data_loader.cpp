@@ -23,11 +23,11 @@ namespace nova::bf {
 
     inline glm::vec2 to_vec2(const bve::Vector2<float>& vec) { return {vec.x, vec.y}; }
 
-    DataLoader::DataLoader(entt::registry& world, renderer::NovaRenderer& renderer) : registry(world), renderer(renderer) {
+    DataLoader::DataLoader(entt::registry& world, renderer::NovaRenderer& renderer_in) : registry(world), renderer(renderer_in) {
         g_ui_event_bus->sink<LoadTrainEvent>().connect<&DataLoader::load_train>(this);
     }
 
-    void DataLoader::load_train(const LoadTrainEvent& event) {
+    void DataLoader::load_train(const LoadTrainEvent& event) const {
         MTR_SCOPE("DataLoader::load_train", "All");
 
         // TODO: Local allocator for each train
@@ -50,9 +50,7 @@ namespace nova::bf {
 
                 logger->verbose("Processing a mesh with %u vertices and %u indices", train_mesh.vertices.count, train_mesh.indices.count);
 
-                // TODO: Figure out a cleaner way to handle this
-
-                auto* allocator = &rx::memory::g_system_allocator;
+                auto& allocator = rx::memory::system_allocator::instance();
                 rx::vector<BestFriendTrainVertex> vertex_data{allocator};
                 vertex_data.reserve(train_mesh.vertices.count);
                 for(uint32_t v = 0; v < train_mesh.vertices.count; v++) {
@@ -68,7 +66,7 @@ namespace nova::bf {
                 }
 
                 renderer::MeshData mesh_data{3,
-                                             train_mesh.indices.count,
+                                             static_cast<uint32_t>(train_mesh.indices.count),
                                              vertex_data.data(),
                                              vertex_data.size() * sizeof(BestFriendTrainVertex),
                                              indices.data(),
@@ -79,7 +77,7 @@ namespace nova::bf {
 
                 renderer::StaticMeshRenderableCreateInfo renderable_data{};
                 renderable_data.mesh = mesh;
-                renderable_data.scale = glm::vec3{0.01};
+                renderable_data.scale = glm::vec3{0.01f};
 
                 const auto renderable = renderer.add_renderable_for_material(pass_name, renderable_data);
                 logger->verbose("Added renderable %u", renderable);

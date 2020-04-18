@@ -10,8 +10,8 @@
 
     "primitiveMode": "Triangles",
 
-    "vertexShader": "shaders/gui.vertex.hlsl",
-    "fragmentShader": "shaders/gui.pixel.hlsl",
+    "vertexShader": "shaders/gui.vertex.spirv",
+    "fragmentShader": "shaders/gui.pixel.spirv",
 
     "scissorMode": "DynamicScissorRect",
 

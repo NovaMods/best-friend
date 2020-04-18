@@ -13,6 +13,7 @@
 #include "../../external/nova-renderer/external/glfw/include/GLFW/glfw3.h"
 #include "../util/constants.hpp"
 #include "rx/core/algorithm/max.h"
+
 using namespace nova::renderer;
 using namespace renderpack;
 using namespace rhi;
@@ -27,19 +28,6 @@ namespace nova::bf {
     constexpr const char* UI_UBO_NAME = "BestFriendUiUbo";
 
     constexpr const char* UI_CAMERA_NAME = "UI Camera";
-
-    constexpr uint32_t UI_UBO_DESCRIPTOR_SET = 0;
-    constexpr uint32_t UI_UBO_DESCRIPTOR_BINDING = 0;
-
-    constexpr uint32_t UI_SAMPLER_DESCRIPTOR_SET = 1;
-    constexpr uint32_t UI_SAMPLER_DESCRIPTOR_BINDING = 0;
-
-    constexpr uint32_t UI_TEXTURES_DESCRIPTOR_SET = 1;
-    constexpr uint32_t UI_TEXTURES_DESCRIPTOR_BINDING = 1;
-
-    constexpr PixelFormat UI_ATLAS_FORMAT = PixelFormat::Rgba8;
-    constexpr rx_size UI_ATLAS_WIDTH = 512;
-    constexpr rx_size UI_ATLAS_HEIGHT = 512;
 
     struct UiDrawParams {
         glm::mat4 projection;
@@ -56,20 +44,20 @@ namespace nova::bf {
 
     nk_buttons to_nk_mouse_button(uint32_t button);
 
-    NuklearImage::NuklearImage(TextureResourceAccessor image, const struct nk_image nk_image)
-        : image(rx::utility::move(image)), nk_image(nk_image) {}
+    NuklearImage::NuklearImage(TextureResourceAccessor image_in, const struct nk_image nk_image_in)
+        : image(rx::utility::move(image_in)), nk_image(nk_image_in) {}
 
-    DefaultNuklearImage::DefaultNuklearImage(const TextureResourceAccessor& image,
-                                             const struct nk_image nk_image,
+    DefaultNuklearImage::DefaultNuklearImage(const TextureResourceAccessor& image_in,
+                                             const struct nk_image nk_image_in,
                                              const nk_draw_null_texture null_tex)
-        : NuklearImage(image, nk_image), nk_null_tex(null_tex) {}
+        : NuklearImage(image_in, nk_image_in), nk_null_tex(null_tex) {}
 
-    NuklearUiPass::NuklearUiPass(NovaRenderer* renderer)
-        : nk_ctx{rx::make_ptr<nk_context>(&renderer->get_global_allocator())},
-          renderer(*renderer),
-          mesh(renderer->create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)),
-          allocator{renderer->get_global_allocator()},
-          materials{&allocator} {
+    NuklearUiPass::NuklearUiPass(NovaRenderer* renderer_in)
+        : nk_ctx{rx::make_ptr<nk_context>(renderer_in->get_global_allocator())},
+          renderer(*renderer_in),
+          mesh(renderer_in->create_procedural_mesh(MAX_VERTEX_BUFFER_SIZE, MAX_INDEX_BUFFER_SIZE)),
+          allocator{renderer_in->get_global_allocator()},
+          materials{allocator} {
 
         name = UI_RENDER_PASS_NAME;
 
@@ -142,7 +130,7 @@ namespace nova::bf {
         auto image = resource_manager.create_texture(name, width, height, PixelFormat::Rgba8, image_data, allocator);
         if(image) {
             const auto texture_id = resource_manager.get_texture_idx_for_name(name);
-            logger->verbose("Texture %s was created with ID %u", name, texture_id);
+            logger->verbose("Texture %s was created with ID %u", name, *texture_id);
 
             const struct nk_image nk_image = nk_image_id(static_cast<int>(*texture_id));
 
@@ -177,7 +165,7 @@ namespace nova::bf {
     }
 
     void NuklearUiPass::create_default_texture() {
-        rx::vector<uint8_t> default_img_data{&allocator, 8 * 8 * 4};
+        rx::vector<uint8_t> default_img_data{allocator, 8 * 8 * 4};
         default_img_data.each_fwd([](uint8_t& elem) { elem = 0xFF; }); // Set the whole texture to white
 
         const rx::optional<NuklearImage> default_image = create_image(DEFAULT_TEXTURE_NAME, 8, 8, default_img_data.data());
@@ -191,8 +179,8 @@ namespace nova::bf {
 
     void NuklearUiPass::create_ui_ubo() {
         auto& resource_manager = renderer.get_resource_manager();
-        if(const auto buffer = resource_manager.create_uniform_buffer(UI_UBO_NAME, sizeof(glm::mat4)); buffer) {
-            ui_draw_params = (*buffer)->buffer;
+        if(auto buffer = resource_manager.create_uniform_buffer(UI_UBO_NAME, sizeof(glm::mat4)); buffer) {
+            ui_draw_params = rx::utility::move((*buffer)->buffer);
 
         } else {
             logger->error("Could not create UI UBO");
@@ -439,12 +427,10 @@ namespace nova::bf {
         ui_matrix[0][0] /= window_size.x;
         ui_matrix[1][1] /= window_size.y;
 
-        frame_ctx.nova->get_device().write_data_to_buffer(&ui_matrix[0][0], sizeof(glm::mat4), ui_draw_params);
+        frame_ctx.nova->get_device().write_data_to_buffer(&ui_matrix[0][0], sizeof(glm::mat4), *ui_draw_params);
     }
 
     void NuklearUiPass::render_ui(RhiRenderCommandList& cmds, FrameContext& frame_ctx) {
-        const auto frame_idx = frame_ctx.frame_idx;
-
         // Pipeline state should have been loaded from the renderpack
         const auto pipeline = frame_ctx.nova->find_pipeline(UI_PIPELINE_NAME);
         if(!pipeline) {
@@ -462,18 +448,18 @@ namespace nova::bf {
             vertex_buffers.push_back(vertex_buffer);
         }
         cmds.bind_vertex_buffers(vertex_buffers);
-        cmds.bind_index_buffer(index_buffer, IndexType::Uint16);
+        cmds.bind_index_buffer(*index_buffer, IndexType::Uint16);
 
         // Textures to bind to the current descriptor set
-        rx::vector<RhiImage*> current_descriptor_textures{frame_ctx.allocator};
+        rx::vector<RhiImage*> current_descriptor_textures{*frame_ctx.allocator};
         current_descriptor_textures.reserve(MAX_NUM_TEXTURES);
-        current_descriptor_textures.push_back(default_texture->image->image);
+        current_descriptor_textures.push_back(default_texture->image->image.get());
 
         uint32_t num_sets_used = 0;
         uint32_t offset = 0;
 
-        rx::vector<NuklearVertex> vertices{frame_ctx.allocator, raw_vertices.size()};
-        rx::vector<rx::pair<uint32_t, NuklearUiMaterial*>> used_materials{frame_ctx.allocator};
+        rx::vector<NuklearVertex> vertices{*frame_ctx.allocator, raw_vertices.size()};
+        rx::vector<rx::pair<uint32_t, NuklearUiMaterial*>> used_materials{*frame_ctx.allocator};
 
         // Record drawcalls
         const nk_draw_command* cmd;
@@ -492,12 +478,12 @@ namespace nova::bf {
             // Save the material we just used so we can free it and use it next frame
             used_materials.push_back({idx, material});
 
-            const auto scissor_rect_x = static_cast<uint32_t>(rx::algorithm::max(0.0f, round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
-            const auto scissor_rect_y = static_cast<uint32_t>(rx::algorithm::max(0.0f, round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
+            const auto scissor_rect_x = static_cast<uint32_t>(rx::algorithm::max(0.0F, round(cmd->clip_rect.x * framebuffer_size_ratio.x)));
+            const auto scissor_rect_y = static_cast<uint32_t>(rx::algorithm::max(0.0F, round(cmd->clip_rect.y * framebuffer_size_ratio.y)));
             const auto scissor_rect_width = static_cast<uint32_t>(
-                rx::algorithm::max(0.0f, round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
+                rx::algorithm::max(0.0F, round(cmd->clip_rect.w * framebuffer_size_ratio.x)));
             const auto scissor_rect_height = static_cast<uint32_t>(
-                rx::algorithm::max(0.0f, round(cmd->clip_rect.h * framebuffer_size_ratio.y)));
+                rx::algorithm::max(0.0F, round(cmd->clip_rect.h * framebuffer_size_ratio.y)));
 
             cmds.set_scissor_rect(scissor_rect_x, scissor_rect_y, scissor_rect_width, scissor_rect_height);
 

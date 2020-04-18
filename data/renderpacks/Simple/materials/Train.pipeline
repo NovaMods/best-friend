@@ -9,6 +9,6 @@
 
     "primitiveMode": "Triangles",
 
-    "vertexShader": "shaders/train.vertex.hlsl",
-    "fragmentShader": "shaders/train.pixel.hlsl"
+    "vertexShader": "shaders/train.vertex.spirv",
+    "fragmentShader": "shaders/train.pixel.spirv"
 }

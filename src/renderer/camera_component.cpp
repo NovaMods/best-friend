@@ -1,8 +1,8 @@
-#pragma once
-
 #include "camera_component.hpp"
+
+#include <minitrace.h>
+
 #include "../ec/transform.hpp"
-#include "minitrace.h"
 
 namespace nova::bf {
     void update_camera_positions(entt::registry& registry) {

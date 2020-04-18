@@ -70,3 +70,19 @@ target_link_libraries(best-friend PRIVATE nova-renderer bve_native.dll.lib EnTT:
 target_include_directories(best-friend PRIVATE "${CMAKE_CURRENT_LIST_DIR}/external/nova_renderer/include")
 target_compile_definitions(best-friend PRIVATE _CRT_SECURE_NO_WARNINGS)
 target_compile_definitions(best-friend PRIVATE BEST_FRIEND_DATA_DIR="${CMAKE_CURRENT_LIST_DIR}/data")
+target_compile_definitions(best-friend INTERFACE NOVA_DEBUG)
+
+###########################
+# Compile builtin shaders #
+###########################
+add_dependencies(best-friend shader-compiler)
+
+find_package(Python3)
+if(NOT Python3_Interpreter_FOUND)
+    message(ERROR "Could not find Python3 interpreter")
+endif()
+
+add_custom_command(TARGET best-friend
+    PRE_BUILD
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_LIST_DIR}/external/nova-renderer/tools/compile_shaders.py" "${CMAKE_BINARY_DIR}/shader-compiler.exe" "${CMAKE_CURRENT_LIST_DIR}/data/renderpacks/Simple/shaders" "${CMAKE_CURRENT_LIST_DIR}/data/renderpacks/Simple/shaders"
+)
